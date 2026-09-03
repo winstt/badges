@@ -25,8 +25,10 @@ class FinderSync: FIFinderSync {
     override init() {
         super.init()
 
-        // Watch the whole disk — badging should work everywhere in Finder.
-        controller.directoryURLs = [URL(fileURLWithPath: "/")]
+        // Observe the boot disk plus every mounted volume (external drives like a T7,
+        // network shares, disk images). "/" alone does NOT reliably get Finder to badge
+        // items on other volumes — each volume root has to be in the observed set.
+        refreshObservedDirectories()
 
         registerBadges()
 
@@ -34,11 +36,40 @@ class FinderSync: FIFinderSync {
         // so a write in the app fires these observers here.
         suite.addObserver(self, forKeyPath: BadgeStore.rulesDefaultsKey, options: [], context: nil)
         suite.addObserver(self, forKeyPath: BadgeStore.badgingEnabledDefaultsKey, options: [], context: nil)
+
+        // Re-observe when drives are plugged in / ejected so a freshly mounted T7 gets
+        // badged without relaunching Finder.
+        let nc = NSWorkspace.shared.notificationCenter
+        nc.addObserver(self, selector: #selector(volumesChanged),
+                       name: NSWorkspace.didMountNotification, object: nil)
+        nc.addObserver(self, selector: #selector(volumesChanged),
+                       name: NSWorkspace.didUnmountNotification, object: nil)
+        nc.addObserver(self, selector: #selector(volumesChanged),
+                       name: NSWorkspace.didRenameVolumeNotification, object: nil)
     }
 
     deinit {
         suite.removeObserver(self, forKeyPath: BadgeStore.rulesDefaultsKey)
         suite.removeObserver(self, forKeyPath: BadgeStore.badgingEnabledDefaultsKey)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+    }
+
+    @objc private func volumesChanged(_ note: Notification) {
+        refreshObservedDirectories()
+    }
+
+    /// The set of roots Finder should ask us about: the boot volume plus every mounted
+    /// volume. Building the URL list needs no file access (just paths), so it's
+    /// sandbox-safe.
+    private func refreshObservedDirectories() {
+        var roots: Set<URL> = [URL(fileURLWithPath: "/")]
+        if let volumes = FileManager.default.mountedVolumeURLs(
+            includingResourceValuesForKeys: nil,
+            options: [.skipHiddenVolumes]
+        ) {
+            roots.formUnion(volumes)
+        }
+        controller.directoryURLs = roots
     }
 
     override func observeValue(
@@ -61,7 +92,7 @@ class FinderSync: FIFinderSync {
         // `requestBadgeIdentifier` for items currently onscreen, so a toggle / manual
         // Refresh repaints the frontmost window instead of showing stale badges.
         controller.directoryURLs = []
-        controller.directoryURLs = [URL(fileURLWithPath: "/")]
+        refreshObservedDirectories()
     }
 
     /// Register a Finder badge identifier for every distinct badge image.
