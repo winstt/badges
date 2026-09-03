@@ -41,17 +41,46 @@ shared/
 PLAN.md      roadmap / source of truth for scope + phases
 ```
 
-## macOS quick start
+## Try it (macOS)
+
+> **Heads up:** there's **no one-click download yet.** Until the app is notarized
+> with an Apple *Developer ID*, a prebuilt binary won't launch on someone else's Mac
+> (Gatekeeper blocks it, and a dev-signed build only runs on the developer's own
+> machines). So for now Badges is **build-from-source** — a bit technical, but if
+> you're comfortable in the terminal it's ~2 minutes. A signed `.dmg` is coming.
+
+You need macOS 14.6+ and **full Xcode** installed (not just Command Line Tools).
 
 ```sh
+# 1. tools
 brew install xcodegen
-cd platforms/macos && xcodegen generate
-xcodebuild -project Badges.xcodeproj -scheme Badges build
+xcode-select --install                      # if you don't have Xcode CLTs
+
+# 2. get the code
+git clone https://github.com/winstt/badges.git
+cd badges/platforms/macos
+
+# 3. build
+xcodegen generate
+xcodebuild -project Badges.xcodeproj -scheme Badges -configuration Release build
+
+# 4. install into /Applications (FinderSync only loads from there)
+APP=$(xcodebuild -project Badges.xcodeproj -scheme Badges -configuration Release \
+        -showBuildSettings | awk -F' = ' \
+        '/ TARGET_BUILD_DIR /{d=$2} / FULL_PRODUCT_NAME /{n=$2} END{print d"/"n}')
+cp -R "$APP" /Applications/Badges.app
+open /Applications/Badges.app
 ```
 
-Full build/deploy/gotchas: [`platforms/macos/README.md`](platforms/macos/README.md).
+Then enable the extension in **System Settings → General → Login Items & Extensions
+→ Finder**, and look for the **B** in your menu bar. Badges show on matching files
+in Finder. (Using Adobe Creative Cloud? Its Finder extension can hog the badge slot —
+disable *Core Sync* under the same Extensions pane if badges don't appear.)
+
+Build details, dev loop, and gotchas: [`platforms/macos/README.md`](platforms/macos/README.md).
 
 ## Status
 
-macOS is working and in active development; a notarized DMG + landing page are the
-next milestone (see [PLAN.md](PLAN.md)). Windows and Linux are scoped but not started.
+macOS is working and in active development. Next milestone: **Developer ID signing →
+notarized `.dmg` → landing page** so anyone can install it with a double-click (see
+[PLAN.md](PLAN.md)). Windows and Linux are scoped but not started.
