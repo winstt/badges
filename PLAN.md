@@ -100,6 +100,11 @@ then build. After that → Phase 2 (add-format UI).
    Dev loop: build → `cp -R` to /Applications → `pluginkit -e use` → `killall Finder`.
 5. **Triggering:** requestBadgeIdentifier only fires for items *drawn onscreen* in a
    frontmost window. `open` alone may not trigger it; `osascript ... activate` does.
+6. **External volumes need explicit observation.** `directoryURLs = ["/"]` does NOT
+   reliably badge other volumes (external SSDs like a T7, network shares). Fix: observe
+   `/` + `FileManager.mountedVolumeURLs(...)`, and refresh on NSWorkspace
+   didMount/didUnmount/didRenameVolume so a freshly plugged drive badges without a
+   Finder relaunch. Badging needs no file read, so this is sandbox-safe.
 
 ## Phase 1.5 — Menu-bar UI ✅ (2026-09-03)
 
