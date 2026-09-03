@@ -4,5 +4,7 @@
 .DS_Store
 build/
 DerivedData/
+dist/
+.build-dmg/
 xcuserdata/
 *.xcuserstate
