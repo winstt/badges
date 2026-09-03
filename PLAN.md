@@ -144,15 +144,16 @@ platform is a separate native shell integration; they share only a portable rule
 
 Goal: user adds any format without us shipping an update.
 
-- [ ] "Add format" sheet: name + extension list + badge picker
-      (choose from bundled badges **or import own PNG**)
-- [ ] Custom image import → copy into App Group `CustomBadges/` (already scaffolded
-      in `BadgeStore.customBadgesURL`)
-- [ ] Edit + delete existing rules (swipe/context menu), drag to reorder (priority)
-- [ ] **Live reload**: FinderSync registers badge images only at launch → extension
-      must observe store changes (KVO on UserDefaults / `NSFileCoordinator` signal)
-      and re-register + trigger re-badging. Fallback: relaunch ext via `pluginkit`.
-- [ ] Empty/edge states: no matching image, duplicate extension conflict warning
+- [x] "Add format" sheet (`AddFormatSheet.swift`): name + extension list + badge picker
+      (bundled badges **or import own PNG** via `.fileImporter`). In the manager window.
+- [x] Custom image import → `BadgeStore.importCustomBadge(from:)` copies into App Group
+      `CustomBadges/` (security-scoped read from the open panel). `deleteCustomBadge` GCs
+      orphans on rule delete.
+- [x] **Delete** existing rules (right-click row → Delete in the manager window).
+- [x] **Live reload** — done in Phase 1.5 via cross-process KVO in `FinderSync.observeValue`.
+- [x] Duplicate-extension **conflict warning** in the sheet (`conflictingExtensions`).
+- [ ] **Edit** existing rules + drag to **reorder** (priority) — not done yet.
+- [ ] Empty state / no-matching-image polish.
 
 ## ~~Phase 3 — QuickLook layer (corners + stacking)~~ ❌ SHELVED (2026-09-02)
 

@@ -107,6 +107,7 @@ struct MenuPanel: View {
 
 struct ContentView: View {
     @ObservedObject var model: BadgeRulesModel
+    @State private var addingFormat = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -115,11 +116,21 @@ struct ContentView: View {
             List {
                 ForEach(model.rules) { rule in
                     BadgeRuleRow(rule: rule, model: model)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                model.delete(rule)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                 }
             }
             .listStyle(.inset)
             Divider()
             footer
+        }
+        .sheet(isPresented: $addingFormat) {
+            AddFormatSheet(model: model)
         }
     }
 
@@ -146,9 +157,14 @@ struct ContentView: View {
 
     private var footer: some View {
         HStack {
+            Button {
+                addingFormat = true
+            } label: {
+                Label("Add format", systemImage: "plus")
+            }
             Button("Reset to defaults") { model.resetToDefaults() }
             Spacer()
-            Text("Enable the extension in System Settings → Extensions → Finder")
+            Text("Right-click a row to delete")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }

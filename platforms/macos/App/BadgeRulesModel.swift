@@ -34,10 +34,26 @@ final class BadgeRulesModel: ObservableObject {
 
     func delete(_ rule: BadgeRule) {
         rules.removeAll { $0.id == rule.id }
+        // Clean up an orphaned custom image if no other rule still uses it.
+        if rule.isCustomImage, !rules.contains(where: { $0.badgeAsset == rule.badgeAsset }) {
+            store.deleteCustomBadge(named: rule.badgeAsset)
+        }
     }
 
     func addRule(_ rule: BadgeRule) {
         rules.append(rule)
+    }
+
+    /// Copy a user-picked PNG into the shared container. Returns the stored filename
+    /// to use as a custom `badgeAsset`.
+    func importCustomBadge(from url: URL) -> String? {
+        store.importCustomBadge(from: url)
+    }
+
+    /// Extensions already claimed by another rule — used to warn about duplicates.
+    func conflictingExtensions(_ exts: [String], excluding ruleID: UUID? = nil) -> [String] {
+        let taken = Set(rules.filter { $0.id != ruleID }.flatMap { $0.fileExtensions })
+        return exts.filter { taken.contains($0) }
     }
 
     func resetToDefaults() {

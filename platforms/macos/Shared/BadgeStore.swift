@@ -70,6 +70,32 @@ final class BadgeStore: @unchecked Sendable {
         defaults.set(data, forKey: rulesKey)
     }
 
+    /// Copy a user-picked image into the shared container so both the app and the
+    /// extension can load it as a custom badge. Returns the stored filename (to put in
+    /// `BadgeRule.badgeAsset` with `isCustomImage = true`), or nil on failure.
+    func importCustomBadge(from source: URL) -> String? {
+        let ext = source.pathExtension.isEmpty ? "png" : source.pathExtension.lowercased()
+        let filename = "custom-\(UUID().uuidString).\(ext)"
+        let dest = customBadgesURL.appendingPathComponent(filename)
+        // The URL comes from a sandbox open-panel; access is security-scoped.
+        let scoped = source.startAccessingSecurityScopedResource()
+        defer { if scoped { source.stopAccessingSecurityScopedResource() } }
+        do {
+            let data = try Data(contentsOf: source)
+            try data.write(to: dest)
+            return filename
+        } catch {
+            NSLog("importCustomBadge failed: \(error)")
+            return nil
+        }
+    }
+
+    /// Remove a custom badge file no rule references anymore. No-op for bundled assets.
+    func deleteCustomBadge(named filename: String) {
+        let url = customBadgesURL.appendingPathComponent(filename)
+        try? FileManager.default.removeItem(at: url)
+    }
+
     /// Master switch. When off, the extension draws no badges at all — the menu-bar
     /// "B" dims to signal the paused state. Defaults to on.
     var badgingEnabled: Bool {
@@ -94,4 +120,9 @@ extension BadgeRule {
             BadgeRule(name: "Blender", fileExtensions: ["blend"], badgeAsset: "blendBadge"),
         ]
     }
+
+    /// Bundled badge asset names, for the "Add format" picker.
+    static let bundledBadgeAssets = [
+        "psdBadge", "aiBadge", "pdfBadge", "svgBadge", "mp4Badge", "blendBadge",
+    ]
 }
