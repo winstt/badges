@@ -1,0 +1,91 @@
+# Badges — XcodeGen project definition.
+# Regenerate the .xcodeproj any time with:  xcodegen generate
+# (brew install xcodegen)
+name: Badges
+
+options:
+  bundleIdPrefix: com.matyasnowak
+  deploymentTarget:
+    macOS: "14.6"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "2.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+    # Xcode 16+ wraps Debug builds in a "debug dylib" stub for previews/hot-reload.
+    # System-loaded app extensions (FinderSync, QuickLook) don't init through that
+    # stub — the extension process starts but its principal class never runs. Force
+    # a normal single-binary build so the extensions actually load.
+    ENABLE_DEBUG_DYLIB: NO
+    # Set your Apple Development team once here and every target inherits it.
+    # IMPORTANT: the same Team ID must also match TEAMID in
+    # Shared/BadgeStore.swift (appGroupID) — the app group is Team-ID-prefixed.
+    DEVELOPMENT_TEAM: ATQ3U47NSK
+
+targets:
+  Badges:
+    type: application
+    platform: macOS
+    sources:
+      - App
+      - Shared
+      - BadgeAssets.xcassets
+    dependencies:
+      - target: BadgesFinderExt
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.matyasnowak.badges
+        PRODUCT_NAME: Badges
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Matyáš Nowak"
+        # Menu-bar utility: the UI lives in the top bar (the "B"), so no Dock icon.
+        INFOPLIST_KEY_LSUIElement: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+    entitlements:
+      path: App/Badges.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-only: true
+        # Team-ID-prefixed app group: required for Developer ID (non-MAS) macOS
+        # distribution; group.* would need a provisioning profile and prompts on
+        # macOS 15+. $(TeamIdentifierPrefix) expands to "<TEAMID>." at build time.
+        com.apple.security.application-groups:
+          - $(TeamIdentifierPrefix)com.matyasnowak.badges
+
+  BadgesFinderExt:
+    type: app-extension
+    platform: macOS
+    sources:
+      - FinderExt
+      - Shared
+      - BadgeAssets.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.matyasnowak.badges.finderext
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: FinderExt/BadgesFinderExt-Info.plist
+        ENABLE_HARDENED_RUNTIME: YES
+        SKIP_INSTALL: YES
+    entitlements:
+      path: FinderExt/BadgesFinderExt.entitlements
+      properties:
+        # FinderSync extensions must be sandboxed or macOS won't load them.
+        com.apple.security.app-sandbox: true
+        # Team-ID-prefixed app group: shared ruleset container between app + extension.
+        com.apple.security.application-groups:
+          - $(TeamIdentifierPrefix)com.matyasnowak.badges
+
+schemes:
+  Badges:
+    build:
+      targets:
+        Badges: all
+    run:
+      config: Debug
+    archive:
+      config: Release

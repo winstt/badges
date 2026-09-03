@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/matyasnowak/badges/shared/schema/rules.schema.json",
+  "title": "Badges ruleset",
+  "description": "Portable, platform-agnostic badge ruleset. Every platform shell integration (macOS FinderSync, Windows shell overlay handler, Linux file-manager extension) reads this same document so behaviour and artwork stay in sync. Badge PNGs live alongside in shared/badges/ (1024px masters, downscaled per platform).",
+  "type": "object",
+  "required": ["version", "badgingEnabled", "rules"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version. Bump on breaking changes."
+    },
+    "badgingEnabled": {
+      "type": "boolean",
+      "description": "Master switch. When false the shell draws no badges at all."
+    },
+    "rules": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/rule" }
+    }
+  },
+  "definitions": {
+    "rule": {
+      "type": "object",
+      "required": ["id", "name", "fileExtensions", "badgeAsset", "isEnabled"],
+      "properties": {
+        "id": { "type": "string", "description": "Stable UUID." },
+        "name": { "type": "string", "description": "Human label, e.g. \"Photoshop\"." },
+        "fileExtensions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Lower-cased extensions without the dot, e.g. [\"psd\",\"psb\"]."
+        },
+        "badgeAsset": {
+          "type": "string",
+          "description": "Badge image id. Built-in = base filename in shared/badges/ (e.g. \"psd\"); custom = filename in the platform's custom-badges container."
+        },
+        "isCustomImage": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when the image is user-supplied rather than a shipped asset."
+        },
+        "isEnabled": { "type": "boolean" }
+      }
+    }
+  }
+}

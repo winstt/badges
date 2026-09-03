@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "badgingEnabled": true,
+  "rules": [
+    { "id": "00000000-0000-0000-0000-000000000001", "name": "Photoshop",   "fileExtensions": ["psd", "psb"], "badgeAsset": "psd",   "isEnabled": true },
+    { "id": "00000000-0000-0000-0000-000000000002", "name": "Illustrator", "fileExtensions": ["ai"],          "badgeAsset": "ai",    "isEnabled": true },
+    { "id": "00000000-0000-0000-0000-000000000003", "name": "PDF",         "fileExtensions": ["pdf"],         "badgeAsset": "pdf",   "isEnabled": true },
+    { "id": "00000000-0000-0000-0000-000000000004", "name": "SVG",         "fileExtensions": ["svg"],         "badgeAsset": "svg",   "isEnabled": true },
+    { "id": "00000000-0000-0000-0000-000000000005", "name": "MP4",         "fileExtensions": ["mp4"],         "badgeAsset": "mp4",   "isEnabled": true },
+    { "id": "00000000-0000-0000-0000-000000000006", "name": "Blender",     "fileExtensions": ["blend"],       "badgeAsset": "blend", "isEnabled": true }
+  ]
+}
