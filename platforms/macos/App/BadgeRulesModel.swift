@@ -34,20 +34,53 @@ final class BadgeRulesModel: ObservableObject {
 
     func delete(_ rule: BadgeRule) {
         rules.removeAll { $0.id == rule.id }
-        // Clean up an orphaned custom image if no other rule still uses it.
-        if rule.isCustomImage, !rules.contains(where: { $0.badgeAsset == rule.badgeAsset }) {
-            store.deleteCustomBadge(named: rule.badgeAsset)
+        garbageCollect(customBadge: rule.isCustomImage ? rule.badgeAsset : nil)
+    }
+
+    /// New rules land at the top so a just-added, more-specific rule out-prioritises
+    /// the general ones already there (priority = list order, top wins).
+    func addRule(_ rule: BadgeRule) {
+        rules.insert(rule, at: 0)
+    }
+
+    /// Replace an existing rule in place (create+edit share one editor). If the edit
+    /// swapped out a custom image, GC the old file when nothing else references it.
+    func update(_ rule: BadgeRule) {
+        guard let idx = rules.firstIndex(where: { $0.id == rule.id }) else { return }
+        let old = rules[idx]
+        rules[idx] = rule
+        if old.isCustomImage, old.badgeAsset != rule.badgeAsset {
+            garbageCollect(customBadge: old.badgeAsset)
         }
     }
 
-    func addRule(_ rule: BadgeRule) {
-        rules.append(rule)
+    // MARK: Priority (list order = priority; index 0 wins)
+
+    /// Drag-to-reorder hook for the List.
+    func move(fromOffsets: IndexSet, toOffset: Int) {
+        rules.move(fromOffsets: fromOffsets, toOffset: toOffset)
     }
 
-    /// Copy a user-picked PNG into the shared container. Returns the stored filename
-    /// to use as a custom `badgeAsset`.
-    func importCustomBadge(from url: URL) -> String? {
-        store.importCustomBadge(from: url)
+    func promote(_ rule: BadgeRule) {
+        guard let i = rules.firstIndex(where: { $0.id == rule.id }), i > 0 else { return }
+        rules.swapAt(i, i - 1)
+    }
+
+    func demote(_ rule: BadgeRule) {
+        guard let i = rules.firstIndex(where: { $0.id == rule.id }), i < rules.count - 1 else { return }
+        rules.swapAt(i, i + 1)
+    }
+
+    /// Copy a user-picked image into the shared container (normalized PNG). Throws
+    /// `BadgeImportError`. Returns the stored filename to use as a custom `badgeAsset`.
+    func importCustomBadge(from url: URL) throws -> String {
+        try store.importCustomBadge(from: url)
+    }
+
+    /// Delete a custom badge file if no rule still references it.
+    private func garbageCollect(customBadge filename: String?) {
+        guard let filename, !rules.contains(where: { $0.badgeAsset == filename }) else { return }
+        store.deleteCustomBadge(named: filename)
     }
 
     /// Extensions already claimed by another rule — used to warn about duplicates.

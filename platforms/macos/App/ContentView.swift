@@ -107,7 +107,19 @@ struct MenuPanel: View {
 
 struct ContentView: View {
     @ObservedObject var model: BadgeRulesModel
-    @State private var addingFormat = false
+    @State private var editor: Editor?
+
+    /// What the rule-editor sheet is doing right now.
+    private enum Editor: Identifiable {
+        case create
+        case edit(BadgeRule)
+        var id: String {
+            switch self {
+            case .create: return "create"
+            case .edit(let rule): return rule.id.uuidString
+            }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -115,22 +127,33 @@ struct ContentView: View {
             Divider()
             List {
                 ForEach(model.rules) { rule in
-                    BadgeRuleRow(rule: rule, model: model)
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                model.delete(rule)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
+                    HStack(spacing: 8) {
+                        Image(systemName: "line.3.horizontal")
+                            .foregroundStyle(.tertiary)
+                            .help("Drag to reorder priority")
+                        BadgeRuleRow(rule: rule, model: model)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) { editor = .edit(rule) }
+                    .contextMenu {
+                        Button { editor = .edit(rule) } label: { Label("Edit…", systemImage: "pencil") }
+                        Button { model.promote(rule) } label: { Label("Move up", systemImage: "arrow.up") }
+                        Button { model.demote(rule) } label: { Label("Move down", systemImage: "arrow.down") }
+                        Divider()
+                        Button(role: .destructive) { model.delete(rule) } label: { Label("Delete", systemImage: "trash") }
+                    }
                 }
+                .onMove(perform: model.move)
             }
             .listStyle(.inset)
             Divider()
             footer
         }
-        .sheet(isPresented: $addingFormat) {
-            AddFormatSheet(model: model)
+        .sheet(item: $editor) { which in
+            switch which {
+            case .create: RuleEditorSheet(model: model)
+            case .edit(let rule): RuleEditorSheet(model: model, editing: rule)
+            }
         }
     }
 
@@ -139,7 +162,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Badges")
                     .font(.system(size: 20, weight: .heavy, design: .rounded))
-                Text("File-type badges for Finder")
+                Text("Top of the list wins when a file matches more than one")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -158,13 +181,13 @@ struct ContentView: View {
     private var footer: some View {
         HStack {
             Button {
-                addingFormat = true
+                editor = .create
             } label: {
-                Label("Add format", systemImage: "plus")
+                Label("New format", systemImage: "plus")
             }
             Button("Reset to defaults") { model.resetToDefaults() }
             Spacer()
-            Text("Right-click a row to delete")
+            Text("Double-click to edit · drag to reorder · right-click for more")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }

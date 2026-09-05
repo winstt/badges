@@ -80,12 +80,30 @@ targets:
         com.apple.security.application-groups:
           - $(TeamIdentifierPrefix)com.matyasnowak.badges
 
+  # Logic tests for the Shared engine (priority resolution, matching). Compiles the
+  # Shared sources directly so it needs no app test-host.
+  BadgesTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests
+      - Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.matyasnowak.badges.tests
+        GENERATE_INFOPLIST_FILE: YES
+
 schemes:
   Badges:
     build:
       targets:
         Badges: all
+        BadgesTests: [test]
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - BadgesTests
     archive:
       config: Release

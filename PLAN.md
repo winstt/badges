@@ -157,25 +157,28 @@ Goal: user adds any format without us shipping an update.
 - [x] **Delete** existing rules (right-click row → Delete in the manager window).
 - [x] **Live reload** — done in Phase 1.5 via cross-process KVO in `FinderSync.observeValue`.
 - [x] Duplicate-extension **conflict warning** in the sheet (`conflictingExtensions`).
-- [ ] **Edit** existing rules + drag to **reorder** (priority) — not done yet.
+- [x] **Edit** existing rules + drag to **reorder** (priority). Manager window: drag
+      (`.onMove`) + context-menu Move up/down; double-click or right-click → **Edit…**.
+      Priority = list order (index 0 wins); `BadgeResolver` already returns `.first`.
+- [x] **Badge priority** locked down with unit tests (`Tests/BadgeResolverTests`):
+      first matching rule wins, reorder flips winner, disabled falls through, master-off,
+      case-insensitivity. New rules insert at the **top**.
 - [ ] Empty state / no-matching-image polish.
 
 ### Ideas from user (2026-09-05) — to design & build
 
 Rule editing / custom art:
-- [ ] **Click a badge → change its icon.** Opens an upload sheet where you drop/pick an
-      image to use as that rule's badge. Enforce limits: **max file size (X MB, e.g. 2 MB)**
-      and a **resolution rule** (square, recommend/require ~1024×1024; downscale/reject
-      otherwise). Applies to existing badges too ("set custom logo") — i.e. an editable
-      badge menu, not just add.
-- [ ] The bottom **"+" (new format)** pops a sheet showing a **placeholder badge** + a
-      **name** field + **which files it matches** (extension/"handle" list, e.g. `.wav`,
-      `.png`). (Add-format sheet exists — extend it with the placeholder + inline badge
-      edit so create and edit share one UI.)
-- [ ] **Add arbitrary extensions/"handles"** freely to a rule (e.g. `.wav .png`) — make the
-      extension list a proper editable token field.
+- [x] **Click a badge → change its icon.** `RuleEditorSheet` has a clickable badge well
+      → chooser popover (bundled badges + **Upload image…**). Import enforces **≤5 MB**
+      and **downscales to ≤1024px, re-encodes PNG** (`BadgeStore.importCustomBadge` /
+      `normalizedBadgePNG`, unit-tested in `Tests/BadgeImageTests`). Works in edit mode too.
+- [x] **Create + edit share one sheet** (`RuleEditorSheet`, `editing: BadgeRule?`): the
+      bottom **"+" New format** opens it with a placeholder badge + name + extensions;
+      double-click a row opens the same sheet prefilled. Edit mode has a Delete button.
+- [x] **Add arbitrary extensions/"handles"** freely (space/comma-separated field, dots
+      stripped, lower-cased, de-duped).
 - [ ] **"Any file" custom-badge field** — add a specific file (or filename/pattern) and
-      give it its own custom badge, independent of type.
+      give it its own custom badge, independent of type. (Not done — needs per-path store.)
 
 Per-file badges (beyond extension matching):
 - [ ] **Select specific files** (e.g. several inside one folder) and assign a chosen badge
@@ -184,15 +187,13 @@ Per-file badges (beyond extension matching):
       persist per-path assignments in the store. FinderSync can badge per-URL, so this is
       technically feasible via `requestBadgeIdentifier` matching a path set.
 
-### ⚠️ Open design question — precedence / "what gets overwritten"
-When a file matches **more than one** source of badge (e.g. a `.psd` already gets the
-Photoshop badge, and it's *also* in a per-file selection, or matches a second rule):
-which wins, and is anything drawn **on top**? Decide the precedence order
-(per-file override > specific rule > general rule?). **Hard constraint:** FinderSync draws
-**exactly one badge per file** — there is no "extra badge on top" / stacking. Two badges on
-one file would require the shelved QuickLook layer (see below), which we dropped because it
-replaces the real preview. So for now "overwrite" = pick one badge by precedence; document
-that stacking isn't possible on the FinderSync path.
+### Precedence / "what gets overwritten" — DECIDED (2026-09-05)
+When a file matches **more than one** rule, the **higher rule in the list wins** (priority
+= list order, index 0 first). No stacking: **FinderSync draws exactly one badge per file**
+(hard OS limit) — there is no "extra badge on top". Two badges on one file would need the
+shelved QuickLook layer (below), which we dropped because it replaces the real preview.
+So "overwrite" = pick one badge by priority; reorder to change the winner. (When per-file
+overrides land, they should sit above rules in the precedence: per-file > rule order.)
 
 ## ~~Phase 3 — QuickLook layer (corners + stacking)~~ ❌ SHELVED (2026-09-02)
 
