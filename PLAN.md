@@ -160,6 +160,40 @@ Goal: user adds any format without us shipping an update.
 - [ ] **Edit** existing rules + drag to **reorder** (priority) — not done yet.
 - [ ] Empty state / no-matching-image polish.
 
+### Ideas from user (2026-09-05) — to design & build
+
+Rule editing / custom art:
+- [ ] **Click a badge → change its icon.** Opens an upload sheet where you drop/pick an
+      image to use as that rule's badge. Enforce limits: **max file size (X MB, e.g. 2 MB)**
+      and a **resolution rule** (square, recommend/require ~1024×1024; downscale/reject
+      otherwise). Applies to existing badges too ("set custom logo") — i.e. an editable
+      badge menu, not just add.
+- [ ] The bottom **"+" (new format)** pops a sheet showing a **placeholder badge** + a
+      **name** field + **which files it matches** (extension/"handle" list, e.g. `.wav`,
+      `.png`). (Add-format sheet exists — extend it with the placeholder + inline badge
+      edit so create and edit share one UI.)
+- [ ] **Add arbitrary extensions/"handles"** freely to a rule (e.g. `.wav .png`) — make the
+      extension list a proper editable token field.
+- [ ] **"Any file" custom-badge field** — add a specific file (or filename/pattern) and
+      give it its own custom badge, independent of type.
+
+Per-file badges (beyond extension matching):
+- [ ] **Select specific files** (e.g. several inside one folder) and assign a chosen badge
+      to *only those files* — a per-file override, not a whole-extension rule. Needs a way
+      to target individual paths (right-click action in Finder? in-app file picker?) and to
+      persist per-path assignments in the store. FinderSync can badge per-URL, so this is
+      technically feasible via `requestBadgeIdentifier` matching a path set.
+
+### ⚠️ Open design question — precedence / "what gets overwritten"
+When a file matches **more than one** source of badge (e.g. a `.psd` already gets the
+Photoshop badge, and it's *also* in a per-file selection, or matches a second rule):
+which wins, and is anything drawn **on top**? Decide the precedence order
+(per-file override > specific rule > general rule?). **Hard constraint:** FinderSync draws
+**exactly one badge per file** — there is no "extra badge on top" / stacking. Two badges on
+one file would require the shelved QuickLook layer (see below), which we dropped because it
+replaces the real preview. So for now "overwrite" = pick one badge by precedence; document
+that stacking isn't possible on the FinderSync path.
+
 ## ~~Phase 3 — QuickLook layer (corners + stacking)~~ ❌ SHELVED (2026-09-02)
 
 **Removed from the product.** The QuickLook thumbnail extension composites a type
