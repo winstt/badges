@@ -1,5 +1,8 @@
 <div align="center">
-  <img src="shared/b-logo.png" width="96" alt="Badges logo">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="shared/b-logo-white.png">
+    <img src="shared/b-logo.png" width="96" alt="Badges logo">
+  </picture>
   <h1>Badges</h1>
   <p><strong>File-type badges for your file manager.</strong> Small icons on file
   previews so you can tell a <code>.psd</code> from an <code>.ai</code> from a

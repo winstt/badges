@@ -126,11 +126,9 @@ struct ContentView: View {
             header
             Divider()
             List {
-                ForEach(model.rules) { rule in
+                ForEach(Array(model.rules.enumerated()), id: \.element.id) { index, rule in
                     HStack(spacing: 8) {
-                        Image(systemName: "line.3.horizontal")
-                            .foregroundStyle(.tertiary)
-                            .help("Drag to reorder priority")
+                        reorderControls(index: index, rule: rule)
                         BadgeRuleRow(rule: rule, model: model)
                     }
                     .contentShape(Rectangle())
@@ -155,6 +153,24 @@ struct ContentView: View {
             case .edit(let rule): RuleEditorSheet(model: model, editing: rule)
             }
         }
+    }
+
+    /// Reliable priority controls. `.onMove` drag can be flaky on macOS, so these
+    /// explicit up/down buttons are the primary way to reorder (top = highest).
+    private func reorderControls(index: Int, rule: BadgeRule) -> some View {
+        VStack(spacing: 1) {
+            Button { model.promote(rule) } label: {
+                Image(systemName: "chevron.up")
+            }
+            .disabled(index == 0)
+            Button { model.demote(rule) } label: {
+                Image(systemName: "chevron.down")
+            }
+            .disabled(index == model.rules.count - 1)
+        }
+        .buttonStyle(.borderless)
+        .controlSize(.small)
+        .foregroundStyle(.secondary)
     }
 
     private var header: some View {
@@ -224,7 +240,11 @@ struct BadgeRuleRow: View {
     private var badgePreview: some View {
         Group {
             if let img = BadgeImageLoader.image(for: rule) {
-                Image(nsImage: img).resizable().scaledToFit()
+                Image(nsImage: img)
+                    .resizable()
+                    .interpolation(.high)
+                    .antialiased(true)
+                    .scaledToFit()
             } else {
                 RoundedRectangle(cornerRadius: 6).fill(.quaternary)
             }

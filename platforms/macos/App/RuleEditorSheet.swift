@@ -19,6 +19,7 @@ struct RuleEditorSheet: View {
     @State private var showingChooser = false
     @State private var importing = false
     @State private var importError: String?
+    @State private var dropTargeted = false
 
     init(model: BadgeRulesModel, editing: BadgeRule? = nil) {
         self.model = model
@@ -41,7 +42,21 @@ struct RuleEditorSheet: View {
                 VStack(alignment: .leading, spacing: 12) {
                     field("Name", "e.g. After Effects", $name)
                     VStack(alignment: .leading, spacing: 4) {
-                        field("File extensions", "aep aepx", $extensionsText)
+                        Text("File extensions").font(.caption).foregroundStyle(.secondary)
+                        TextField("aep aepx", text: $extensionsText)
+                            .textFieldStyle(.roundedBorder)
+                        HStack(spacing: 4) {
+                            Image(systemName: dropTargeted ? "arrow.down.doc.fill" : "arrow.down.doc")
+                            Text(dropTargeted ? "Release to add its type" : "…or drag a file here to add its extension")
+                        }
+                        .font(.caption2)
+                        .foregroundStyle(dropTargeted ? Color.accentColor : .secondary)
+                        .padding(.vertical, 6).padding(.horizontal, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(dropTargeted ? Color.accentColor : Color.secondary.opacity(0.3),
+                                          style: StrokeStyle(lineWidth: 1, dash: [4])))
+                        .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { handleDrop($0) }
                         if !conflicts.isEmpty {
                             Label("Also used by another rule: \(conflicts.map { ".\($0)" }.joined(separator: " ")) — the higher rule wins",
                                   systemImage: "arrow.up.arrow.down")
@@ -74,7 +89,9 @@ struct RuleEditorSheet: View {
                 RoundedRectangle(cornerRadius: 16).fill(.quaternary)
                 if let asset = badgeAsset,
                    let img = BadgeImageLoader.image(for: previewRule(asset)) {
-                    Image(nsImage: img).resizable().scaledToFit().padding(10)
+                    Image(nsImage: img)
+                        .resizable().interpolation(.high).antialiased(true)
+                        .scaledToFit().padding(10)
                 } else {
                     VStack(spacing: 4) {
                         Image(systemName: "photo.badge.plus").font(.title2)
@@ -164,7 +181,7 @@ struct RuleEditorSheet: View {
         Group {
             if let img = BadgeImageLoader.image(for:
                 BadgeRule(name: "", fileExtensions: [], badgeAsset: asset, isCustomImage: custom)) {
-                Image(nsImage: img).resizable().scaledToFit()
+                Image(nsImage: img).resizable().interpolation(.high).antialiased(true).scaledToFit()
             } else {
                 Image(systemName: "photo")
             }
@@ -205,6 +222,25 @@ struct RuleEditorSheet: View {
         } catch {
             importError = error.localizedDescription
         }
+    }
+
+    /// Handle a file dropped onto the extensions field: pull each file's extension in.
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        var handled = false
+        for provider in providers where provider.canLoadObject(ofClass: URL.self) {
+            handled = true
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                guard let url, !url.pathExtension.isEmpty else { return }
+                let ext = url.pathExtension.lowercased()
+                Task { @MainActor in addExtension(ext) }
+            }
+        }
+        return handled
+    }
+
+    private func addExtension(_ ext: String) {
+        guard !parsedExtensions.contains(ext) else { return }
+        extensionsText = extensionsText.isEmpty ? ext : extensionsText + " " + ext
     }
 
     private func save() {
