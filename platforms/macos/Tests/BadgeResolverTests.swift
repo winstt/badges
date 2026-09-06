@@ -76,4 +76,31 @@ final class BadgeResolverTests: XCTestCase {
         // BadgeRule normalises extensions to lower-case at init.
         XCTAssertEqual(rule("A", ["PSD", "Psb"]).fileExtensions, ["psd", "psb"])
     }
+
+    // MARK: Category back-compat
+
+    func testDecodingRuleWithoutCategoryFallsBackToOther() throws {
+        // A ruleset saved before categories existed has no "category" key.
+        let json = """
+        {"id":"00000000-0000-0000-0000-000000000001","name":"Photoshop",
+         "fileExtensions":["psd"],"badgeAsset":"psdBadge","isCustomImage":false,"isEnabled":true}
+        """.data(using: .utf8)!
+        let decoded = try JSONDecoder().decode(BadgeRule.self, from: json)
+        XCTAssertEqual(decoded.category, BadgeRule.uncategorized)
+        XCTAssertEqual(decoded.name, "Photoshop")
+    }
+
+    func testCategorySurvivesEncodeDecodeRoundTrip() throws {
+        let r = BadgeRule(name: "MP3", fileExtensions: ["mp3"], badgeAsset: "mp3Badge", category: "Music")
+        let data = try JSONEncoder().encode(r)
+        let back = try JSONDecoder().decode(BadgeRule.self, from: data)
+        XCTAssertEqual(back.category, "Music")
+    }
+
+    func testBuiltInDefaultsAreCategorised() {
+        let cats = Set(BadgeRule.builtInDefaults.map { $0.category })
+        XCTAssertTrue(cats.contains("Graphics"))
+        XCTAssertTrue(cats.contains("Music"))
+        XCTAssertFalse(cats.contains(BadgeRule.uncategorized), "Seeded rules should all have a real category.")
+    }
 }

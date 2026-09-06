@@ -18,6 +18,13 @@ struct BadgeRule: Codable, Identifiable, Equatable {
     /// the bundled asset catalog (i.e. a user-supplied / company-logo badge).
     var isCustomImage: Bool
     var isEnabled: Bool
+    /// Grouping label shown as a collapsible section in the app (e.g. "Graphics",
+    /// "Music", or a user-made one). The extension ignores this — it's app-side
+    /// organization only.
+    var category: String
+
+    /// Fallback category for rules that don't specify one.
+    static let uncategorized = "Other"
 
     init(
         id: UUID = UUID(),
@@ -25,7 +32,8 @@ struct BadgeRule: Codable, Identifiable, Equatable {
         fileExtensions: [String],
         badgeAsset: String,
         isCustomImage: Bool = false,
-        isEnabled: Bool = true
+        isEnabled: Bool = true,
+        category: String = BadgeRule.uncategorized
     ) {
         self.id = id
         self.name = name
@@ -33,6 +41,20 @@ struct BadgeRule: Codable, Identifiable, Equatable {
         self.badgeAsset = badgeAsset
         self.isCustomImage = isCustomImage
         self.isEnabled = isEnabled
+        self.category = category
+    }
+
+    /// Custom decoding so rules saved before categories existed (no `category` key)
+    /// still load — they fall back to `uncategorized`. Encoding stays synthesized.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        fileExtensions = try c.decode([String].self, forKey: .fileExtensions)
+        badgeAsset = try c.decode(String.self, forKey: .badgeAsset)
+        isCustomImage = try c.decode(Bool.self, forKey: .isCustomImage)
+        isEnabled = try c.decode(Bool.self, forKey: .isEnabled)
+        category = try c.decodeIfPresent(String.self, forKey: .category) ?? BadgeRule.uncategorized
     }
 
     /// Does this rule apply to the given file URL?

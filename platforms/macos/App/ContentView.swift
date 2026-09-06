@@ -126,22 +126,17 @@ struct ContentView: View {
             header
             Divider()
             List {
-                ForEach(Array(model.rules.enumerated()), id: \.element.id) { index, rule in
-                    HStack(spacing: 8) {
-                        reorderControls(index: index, rule: rule)
-                        BadgeRuleRow(rule: rule, model: model)
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) { editor = .edit(rule) }
-                    .contextMenu {
-                        Button { editor = .edit(rule) } label: { Label("Edit…", systemImage: "pencil") }
-                        Button { model.promote(rule) } label: { Label("Move up", systemImage: "arrow.up") }
-                        Button { model.demote(rule) } label: { Label("Move down", systemImage: "arrow.down") }
-                        Divider()
-                        Button(role: .destructive) { model.delete(rule) } label: { Label("Delete", systemImage: "trash") }
+                ForEach(model.orderedCategories, id: \.self) { category in
+                    Section {
+                        if !model.isCollapsed(category) {
+                            ForEach(model.rules(in: category)) { rule in
+                                ruleRow(rule)
+                            }
+                        }
+                    } header: {
+                        categoryHeader(category)
                     }
                 }
-                .onMove(perform: model.move)
             }
             .listStyle(.inset)
             Divider()
@@ -155,18 +150,51 @@ struct ContentView: View {
         }
     }
 
-    /// Reliable priority controls. `.onMove` drag can be flaky on macOS, so these
-    /// explicit up/down buttons are the primary way to reorder (top = highest).
-    private func reorderControls(index: Int, rule: BadgeRule) -> some View {
+    /// A collapsible category section header: chevron + name + rule count.
+    private func categoryHeader(_ category: String) -> some View {
+        Button { model.toggleCollapsed(category) } label: {
+            HStack(spacing: 6) {
+                Image(systemName: model.isCollapsed(category) ? "chevron.right" : "chevron.down")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                Text(category).font(.subheadline.weight(.semibold))
+                Text("\(model.rules(in: category).count)")
+                    .font(.caption).foregroundStyle(.secondary)
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func ruleRow(_ rule: BadgeRule) -> some View {
+        HStack(spacing: 8) {
+            reorderControls(rule)
+            BadgeRuleRow(rule: rule, model: model)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) { editor = .edit(rule) }
+        .contextMenu {
+            Button { editor = .edit(rule) } label: { Label("Edit…", systemImage: "pencil") }
+            Button { model.promote(rule) } label: { Label("Move up", systemImage: "arrow.up") }
+            Button { model.demote(rule) } label: { Label("Move down", systemImage: "arrow.down") }
+            Divider()
+            Button(role: .destructive) { model.delete(rule) } label: { Label("Delete", systemImage: "trash") }
+        }
+    }
+
+    /// Explicit up/down buttons are the reliable way to reorder priority within a
+    /// category (macOS `.onMove` drag is flaky).
+    private func reorderControls(_ rule: BadgeRule) -> some View {
         VStack(spacing: 1) {
             Button { model.promote(rule) } label: {
                 Image(systemName: "chevron.up")
             }
-            .disabled(index == 0)
+            .disabled(model.isFirstInCategory(rule))
             Button { model.demote(rule) } label: {
                 Image(systemName: "chevron.down")
             }
-            .disabled(index == model.rules.count - 1)
+            .disabled(model.isLastInCategory(rule))
         }
         .buttonStyle(.borderless)
         .controlSize(.small)

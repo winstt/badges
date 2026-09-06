@@ -16,12 +16,18 @@ final class BadgeRulesModel: ObservableObject {
         didSet { store.badgingEnabled = badgingEnabled }
     }
 
+    /// Collapsed category sections in the manager window (persisted, app-only UI state).
+    @Published var collapsedCategories: Set<String> {
+        didSet { store.collapsedCategories = collapsedCategories }
+    }
+
     private let store: BadgeStore
 
     init(store: BadgeStore = .shared) {
         self.store = store
         self.rules = store.loadRules()
         self.badgingEnabled = store.badgingEnabled
+        self.collapsedCategories = store.collapsedCategories
     }
 
     /// Count of rules currently drawing badges — shown in the menu-bar header.
@@ -37,10 +43,14 @@ final class BadgeRulesModel: ObservableObject {
         garbageCollect(customBadge: rule.isCustomImage ? rule.badgeAsset : nil)
     }
 
-    /// New rules land at the top so a just-added, more-specific rule out-prioritises
-    /// the general ones already there (priority = list order, top wins).
+    /// New rules join the top of their own category (highest priority within it). A
+    /// brand-new category is shown first.
     func addRule(_ rule: BadgeRule) {
-        rules.insert(rule, at: 0)
+        if let firstInCategory = rules.firstIndex(where: { $0.category == rule.category }) {
+            rules.insert(rule, at: firstInCategory)
+        } else {
+            rules.insert(rule, at: 0)
+        }
     }
 
     /// Replace an existing rule in place (create+edit share one editor). If the edit
@@ -54,21 +64,59 @@ final class BadgeRulesModel: ObservableObject {
         }
     }
 
-    // MARK: Priority (list order = priority; index 0 wins)
+    // MARK: Categories
+
+    /// Distinct categories in first-appearance order — the order sections are shown in.
+    var orderedCategories: [String] {
+        var seen = Set<String>()
+        return rules.compactMap { seen.insert($0.category).inserted ? $0.category : nil }
+    }
+
+    /// Rules in one category, preserving their global (priority) order.
+    func rules(in category: String) -> [BadgeRule] {
+        rules.filter { $0.category == category }
+    }
+
+    func isCollapsed(_ category: String) -> Bool { collapsedCategories.contains(category) }
+
+    func toggleCollapsed(_ category: String) {
+        if collapsedCategories.contains(category) { collapsedCategories.remove(category) }
+        else { collapsedCategories.insert(category) }
+    }
+
+    // MARK: Priority (list order = priority; index 0 wins). Reorder is within-category.
 
     /// Drag-to-reorder hook for the List.
     func move(fromOffsets: IndexSet, toOffset: Int) {
         rules.move(fromOffsets: fromOffsets, toOffset: toOffset)
     }
 
+    /// Move a rule up within its own category (above its previous same-category sibling).
     func promote(_ rule: BadgeRule) {
-        guard let i = rules.firstIndex(where: { $0.id == rule.id }), i > 0 else { return }
-        rules.swapAt(i, i - 1)
+        guard let i = rules.firstIndex(where: { $0.id == rule.id }),
+              let j = stride(from: i - 1, through: 0, by: -1)
+                .first(where: { rules[$0].category == rule.category })
+        else { return }
+        let r = rules.remove(at: i)
+        rules.insert(r, at: j)
     }
 
+    /// Move a rule down within its own category (below its next same-category sibling).
     func demote(_ rule: BadgeRule) {
-        guard let i = rules.firstIndex(where: { $0.id == rule.id }), i < rules.count - 1 else { return }
-        rules.swapAt(i, i + 1)
+        guard let i = rules.firstIndex(where: { $0.id == rule.id }),
+              let j = ((i + 1)..<rules.count)
+                .first(where: { rules[$0].category == rule.category })
+        else { return }
+        let r = rules.remove(at: i)
+        rules.insert(r, at: j)  // after removal the sibling shifted to j-1, so this lands after it
+    }
+
+    /// True when the rule is the first/last in its category (to disable up/down).
+    func isFirstInCategory(_ rule: BadgeRule) -> Bool {
+        rules(in: rule.category).first?.id == rule.id
+    }
+    func isLastInCategory(_ rule: BadgeRule) -> Bool {
+        rules(in: rule.category).last?.id == rule.id
     }
 
     /// Copy a user-picked image into the shared container (normalized PNG). Throws

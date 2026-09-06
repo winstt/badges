@@ -175,24 +175,49 @@ final class BadgeStore: @unchecked Sendable {
         }
         set { defaults.set(newValue, forKey: badgingEnabledKey) }
     }
+
+    /// Which category sections the user has collapsed in the manager window. Purely UI
+    /// state (the extension ignores categories), persisted so it survives relaunches.
+    private let collapsedCategoriesKey = "collapsedCategories"
+    var collapsedCategories: Set<String> {
+        get { Set(defaults.stringArray(forKey: collapsedCategoriesKey) ?? []) }
+        set { defaults.set(Array(newValue), forKey: collapsedCategoriesKey) }
+    }
 }
 
 extension BadgeRule {
-    /// The badges that ship in the box (psd, ai, pdf, svg, mp4, blend) — the original
-    /// set, all with artwork in BadgeAssets.xcassets.
+    /// The badges that ship in the box, grouped into categories. Order here = priority
+    /// (top wins) and also the initial category order.
     static var builtInDefaults: [BadgeRule] {
         [
-            BadgeRule(name: "Photoshop", fileExtensions: ["psd", "psb"], badgeAsset: "psdBadge"),
-            BadgeRule(name: "Illustrator", fileExtensions: ["ai"], badgeAsset: "aiBadge"),
-            BadgeRule(name: "PDF", fileExtensions: ["pdf"], badgeAsset: "pdfBadge"),
-            BadgeRule(name: "SVG", fileExtensions: ["svg"], badgeAsset: "svgBadge"),
-            BadgeRule(name: "MP4", fileExtensions: ["mp4"], badgeAsset: "mp4Badge"),
-            BadgeRule(name: "Blender", fileExtensions: ["blend"], badgeAsset: "blendBadge"),
+            // Graphics (Adobe suite / design)
+            BadgeRule(name: "Photoshop", fileExtensions: ["psd", "psb"], badgeAsset: "psdBadge", category: "Graphics"),
+            BadgeRule(name: "Illustrator", fileExtensions: ["ai"], badgeAsset: "aiBadge", category: "Graphics"),
+            BadgeRule(name: "After Effects", fileExtensions: ["aep"], badgeAsset: "aepBadge", category: "Graphics"),
+            BadgeRule(name: "Premiere", fileExtensions: ["prproj"], badgeAsset: "prprojBadge", category: "Graphics"),
+            BadgeRule(name: "PDF", fileExtensions: ["pdf"], badgeAsset: "pdfBadge", category: "Graphics"),
+            BadgeRule(name: "SVG", fileExtensions: ["svg"], badgeAsset: "svgBadge", category: "Graphics"),
+            // Music (audio / producers)
+            BadgeRule(name: "MP3", fileExtensions: ["mp3"], badgeAsset: "mp3Badge", category: "Music"),
+            BadgeRule(name: "WAV", fileExtensions: ["wav"], badgeAsset: "wavBadge", category: "Music"),
+            BadgeRule(name: "FL Studio", fileExtensions: ["flp"], badgeAsset: "flpBadge", category: "Music"),
+            // Video
+            BadgeRule(name: "MP4", fileExtensions: ["mp4"], badgeAsset: "mp4Badge", category: "Video"),
+            BadgeRule(name: "MKV", fileExtensions: ["mkv"], badgeAsset: "mkvBadge", category: "Video"),
+            BadgeRule(name: "MOV", fileExtensions: ["mov"], badgeAsset: "movBadge", category: "Video"),
+            // Images
+            BadgeRule(name: "PNG", fileExtensions: ["png"], badgeAsset: "pngBadge", category: "Images"),
+            BadgeRule(name: "HEIC", fileExtensions: ["heic"], badgeAsset: "heicBadge", category: "Images"),
+            // 3D
+            BadgeRule(name: "Blender", fileExtensions: ["blend"], badgeAsset: "blendBadge", category: "3D"),
         ]
     }
 
-    /// Bundled badge asset names, for the "Add format" picker.
+    /// Bundled badge asset names, for the badge picker in the editor.
     static let bundledBadgeAssets = [
-        "psdBadge", "aiBadge", "pdfBadge", "svgBadge", "mp4Badge", "blendBadge",
+        "psdBadge", "aiBadge", "aepBadge", "prprojBadge", "pdfBadge", "svgBadge",
+        "mp3Badge", "wavBadge", "flpBadge",
+        "mp4Badge", "mkvBadge", "movBadge",
+        "pngBadge", "heicBadge", "blendBadge",
     ]
 }

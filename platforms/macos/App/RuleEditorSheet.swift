@@ -14,6 +14,7 @@ struct RuleEditorSheet: View {
 
     @State private var name: String
     @State private var extensionsText: String
+    @State private var category: String
     @State private var badgeAsset: String?
     @State private var isCustom: Bool
     @State private var showingChooser = false
@@ -26,6 +27,7 @@ struct RuleEditorSheet: View {
         self.editing = editing
         _name = State(initialValue: editing?.name ?? "")
         _extensionsText = State(initialValue: editing?.fileExtensions.joined(separator: " ") ?? "")
+        _category = State(initialValue: editing?.category ?? BadgeRule.uncategorized)
         _badgeAsset = State(initialValue: editing?.badgeAsset)
         _isCustom = State(initialValue: editing?.isCustomImage ?? false)
     }
@@ -63,6 +65,7 @@ struct RuleEditorSheet: View {
                                 .font(.caption2).foregroundStyle(.secondary)
                         }
                     }
+                    categoryField
                 }
             }
 
@@ -166,6 +169,29 @@ struct RuleEditorSheet: View {
 
     // MARK: - Helpers
 
+    /// Category name with a menu to pick an existing one (or type a new one to create it).
+    private var categoryField: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Category").font(.caption).foregroundStyle(.secondary)
+            HStack(spacing: 6) {
+                TextField("e.g. Graphics", text: $category)
+                    .textFieldStyle(.roundedBorder)
+                if !model.orderedCategories.isEmpty {
+                    Menu {
+                        ForEach(model.orderedCategories, id: \.self) { cat in
+                            Button(cat) { category = cat }
+                        }
+                    } label: {
+                        Image(systemName: "list.bullet")
+                    }
+                    .menuStyle(.borderlessButton)
+                    .frame(width: 40)
+                    .help("Pick an existing category")
+                }
+            }
+        }
+    }
+
     private func field(_ label: String, _ placeholder: String, _ text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label).font(.caption).foregroundStyle(.secondary)
@@ -245,13 +271,15 @@ struct RuleEditorSheet: View {
 
     private func save() {
         guard let badgeAsset, isValid else { return }
+        let cat = category.trimmingCharacters(in: .whitespaces)
         let rule = BadgeRule(
             id: editing?.id ?? UUID(),
             name: name.trimmingCharacters(in: .whitespaces),
             fileExtensions: parsedExtensions,
             badgeAsset: badgeAsset,
             isCustomImage: isCustom,
-            isEnabled: editing?.isEnabled ?? true
+            isEnabled: editing?.isEnabled ?? true,
+            category: cat.isEmpty ? BadgeRule.uncategorized : cat
         )
         if isEditing { model.update(rule) } else { model.addRule(rule) }
         dismiss()
