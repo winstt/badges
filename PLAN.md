@@ -176,9 +176,23 @@ Rule editing / custom art:
       bottom **"+" New format** opens it with a placeholder badge + name + extensions;
       double-click a row opens the same sheet prefilled. Edit mode has a Delete button.
 - [x] **Add arbitrary extensions/"handles"** freely (space/comma-separated field, dots
-      stripped, lower-cased, de-duped).
+      stripped, lower-cased, de-duped). Plus **drag a file onto the editor** to add its
+      extension (`.onDrop` on the extensions field).
 - [ ] **"Any file" custom-badge field** — add a specific file (or filename/pattern) and
       give it its own custom badge, independent of type. (Not done — needs per-path store.)
+
+Categories & polish (2026-09-06):
+- [x] **Categories** — `BadgeRule.category` (back-compat: old rules → "Other"). Manager
+      window groups rules into **collapsible** sections; collapse state persists;
+      up/down reorder is **within a category**. Editor has a Category field (pick existing
+      or type a new one). Seeded defaults regrouped Graphics/Music/Video/Images/3D.
+- [x] **9 new badges** wired (aep, prproj, mp3, wav, flp, mkv, mov, png, heic) + refreshed
+      the original 6 art; asset catalog + `shared/badges` + editor picker. 17 tests green.
+- [x] **Sharper previews** (`.interpolation(.high)`), **reliable up/down reorder** (drag
+      was flaky), **README logo** swaps black↔white for light/dark via `<picture>`.
+- [ ] **Icon generator** — a tool to make on-brand badges (file-shape + app glyph +
+      extension label, like the AEP art). Scope TBD (in-app vs repo script).
+- [ ] Optional: one-click **auto-categorize** existing "Other" rules by known extension.
 
 Per-file badges (beyond extension matching):
 - [ ] **Select specific files** (e.g. several inside one folder) and assign a chosen badge
