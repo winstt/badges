@@ -51,4 +51,18 @@ final class BadgeImageTests: XCTestCase {
         XCTAssertLessThanOrEqual(max(out.w, out.h), max(src.w, src.h),
                                  "Small art must not be blown up past its own pixels.")
     }
+
+    // MARK: Generator
+
+    func testGeneratorProducesPNGOfRequestedSize() {
+        let data = BadgeGenerator.makePNG(glyph: "Ae", label: "AEP", color: .systemPurple, side: 256)
+        XCTAssertNotNil(data)
+        XCTAssertEqual(Array(data!.prefix(4)), [0x89, 0x50, 0x4E, 0x47])
+        let px = pixels(data!)
+        XCTAssertEqual(px.w, 256); XCTAssertEqual(px.h, 256)
+    }
+
+    func testGeneratorHandlesEmptyLabel() {
+        XCTAssertNotNil(BadgeGenerator.makePNG(glyph: "X", label: "", color: .systemBlue, side: 128))
+    }
 }

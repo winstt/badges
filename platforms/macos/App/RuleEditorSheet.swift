@@ -21,6 +21,7 @@ struct RuleEditorSheet: View {
     @State private var importing = false
     @State private var importError: String?
     @State private var dropTargeted = false
+    @State private var showingGenerator = false
 
     init(model: BadgeRulesModel, editing: BadgeRule? = nil) {
         self.model = model
@@ -82,6 +83,26 @@ struct RuleEditorSheet: View {
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.png, .jpeg, .image],
                       allowsMultipleSelection: false) { handleImport($0) }
+        .sheet(isPresented: $showingGenerator) {
+            BadgeGeneratorSheet(
+                initialGlyph: defaultGlyph,
+                initialLabel: parsedExtensions.first?.uppercased() ?? ""
+            ) { pngData in
+                if let stored = model.saveCustomBadge(pngData: pngData) {
+                    badgeAsset = stored; isCustom = true
+                } else {
+                    importError = "Couldn't save the generated badge."
+                }
+            }
+        }
+    }
+
+    /// A sensible starting glyph for the generator: the name's initials, else the
+    /// first extension.
+    private var defaultGlyph: String {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        if !trimmed.isEmpty { return String(trimmed.prefix(2)) }
+        return (parsedExtensions.first?.prefix(3)).map { String($0).capitalized } ?? ""
     }
 
     // MARK: - Badge well + chooser
@@ -139,6 +160,11 @@ struct RuleEditorSheet: View {
                 showingChooser = false; importing = true
             } label: {
                 Label("Upload image…", systemImage: "square.and.arrow.up")
+            }
+            Button {
+                showingChooser = false; showingGenerator = true
+            } label: {
+                Label("Generate badge…", systemImage: "wand.and.stars")
             }
             Text("PNG or JPG, up to \(Int(BadgeStore.maxBadgeImageMB)) MB. Large images are scaled to \(Int(BadgeStore.badgeStorageSide)) px.")
                 .font(.caption2).foregroundStyle(.secondary)

@@ -28,7 +28,40 @@ final class BadgeRulesModel: ObservableObject {
         self.rules = store.loadRules()
         self.badgingEnabled = store.badgingEnabled
         self.collapsedCategories = store.collapsedCategories
+
+        // One-time migration: rules created before categories existed decode as "Other".
+        // Sort them into known categories once (never touches deliberately-set ones after).
+        if !store.didAutoCategorize {
+            applyAutoCategorize()
+            store.saveRules(rules)   // observers don't fire during init, so persist by hand
+            store.didAutoCategorize = true
+        }
     }
+
+    /// Extension → category map used by auto-categorize.
+    private static let categoryByExtension: [String: String] = {
+        var m = [String: String]()
+        func add(_ category: String, _ exts: [String]) { exts.forEach { m[$0] = category } }
+        add("Graphics", ["psd", "psb", "ai", "aep", "prproj", "pdf", "svg", "indd", "eps", "sketch", "fig", "xd", "afphoto", "afdesign"])
+        add("Music", ["mp3", "wav", "flp", "aiff", "aif", "als", "logicx", "m4a", "flac", "aac", "ogg", "mid", "midi"])
+        add("Video", ["mp4", "mkv", "mov", "avi", "wmv", "webm", "m4v"])
+        add("Images", ["png", "heic", "jpg", "jpeg", "gif", "tiff", "tif", "webp", "bmp", "heif"])
+        add("3D", ["blend", "obj", "fbx", "stl", "c4d", "gltf", "glb"])
+        return m
+    }()
+
+    /// Assign a category to any rule still in "Other" whose extension we recognise.
+    private func applyAutoCategorize() {
+        for i in rules.indices where rules[i].category == BadgeRule.uncategorized {
+            if let ext = rules[i].fileExtensions.first(where: { Self.categoryByExtension[$0] != nil }),
+               let cat = Self.categoryByExtension[ext] {
+                rules[i].category = cat
+            }
+        }
+    }
+
+    /// Button-triggered version (mutations here fire the save via didSet).
+    func autoCategorize() { applyAutoCategorize() }
 
     /// Count of rules currently drawing badges — shown in the menu-bar header.
     var enabledCount: Int { rules.filter { $0.isEnabled }.count }
@@ -123,6 +156,11 @@ final class BadgeRulesModel: ObservableObject {
     /// `BadgeImportError`. Returns the stored filename to use as a custom `badgeAsset`.
     func importCustomBadge(from url: URL) throws -> String {
         try store.importCustomBadge(from: url)
+    }
+
+    /// Save a generated badge PNG as a custom badge; returns its filename.
+    func saveCustomBadge(pngData: Data) -> String? {
+        store.saveCustomBadge(pngData: pngData)
     }
 
     /// Delete a custom badge file if no rule still references it.

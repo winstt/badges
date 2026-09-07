@@ -160,6 +160,15 @@ final class BadgeStore: @unchecked Sendable {
     }
     #endif
 
+    /// Save already-rendered PNG data (e.g. from the in-app generator) as a custom
+    /// badge. Returns the stored filename, or nil on failure.
+    func saveCustomBadge(pngData: Data) -> String? {
+        let filename = "gen-\(UUID().uuidString).png"
+        let dest = customBadgesURL.appendingPathComponent(filename)
+        do { try pngData.write(to: dest); return filename }
+        catch { NSLog("saveCustomBadge failed: \(error)"); return nil }
+    }
+
     /// Remove a custom badge file no rule references anymore. No-op for bundled assets.
     func deleteCustomBadge(named filename: String) {
         let url = customBadgesURL.appendingPathComponent(filename)
@@ -182,6 +191,14 @@ final class BadgeStore: @unchecked Sendable {
     var collapsedCategories: Set<String> {
         get { Set(defaults.stringArray(forKey: collapsedCategoriesKey) ?? []) }
         set { defaults.set(Array(newValue), forKey: collapsedCategoriesKey) }
+    }
+
+    /// Set once we've run the one-time "sort existing rules into categories" migration,
+    /// so it doesn't re-run and clobber a category the user deliberately set to "Other".
+    private let didAutoCategorizeKey = "didAutoCategorize"
+    var didAutoCategorize: Bool {
+        get { defaults.bool(forKey: didAutoCategorizeKey) }
+        set { defaults.set(newValue, forKey: didAutoCategorizeKey) }
     }
 }
 
