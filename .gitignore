@@ -6,5 +6,6 @@ build/
 DerivedData/
 dist/
 .build-dmg/
+.dd/
 xcuserdata/
 *.xcuserstate
