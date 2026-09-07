@@ -190,9 +190,12 @@ Categories & polish (2026-09-06):
       the original 6 art; asset catalog + `shared/badges` + editor picker. 17 tests green.
 - [x] **Sharper previews** (`.interpolation(.high)`), **reliable up/down reorder** (drag
       was flaky), **README logo** swaps black↔white for light/dark via `<picture>`.
-- [ ] **Icon generator** — a tool to make on-brand badges (file-shape + app glyph +
-      extension label, like the AEP art). Scope TBD (in-app vs repo script).
-- [ ] Optional: one-click **auto-categorize** existing "Other" rules by known extension.
+- [x] **Icon generator (in-app)** — `BadgeGenerator` (Shared) renders on-brand badges
+      (document shape + folded corner, app glyph, extension label, chosen colour) to PNG.
+      In the editor's badge chooser: "Generate badge…" → live-preview panel (glyph +
+      label + colour) → saved as a custom badge. Verified visually + unit-tested.
+- [x] **Auto-categorize** — one-time migration sorts pre-categories rules into known
+      categories by extension (guarded by `didAutoCategorize`); also `model.autoCategorize()`.
 
 Per-file badges (beyond extension matching):
 - [ ] **Select specific files** (e.g. several inside one folder) and assign a chosen badge
