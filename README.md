@@ -1,56 +1,45 @@
 <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="shared/b-logo-white.png">
-    <img src="shared/b-logo.png" width="96" alt="Badges logo">
-  </picture>
+  <img src="shared/app-icon.png" width="128" alt="Badges app icon">
   <h1>Badges</h1>
-  <p><strong>File-type badges for your file manager.</strong> Small icons on file
-  previews so you can tell a <code>.psd</code> from an <code>.ai</code> from a
-  <code>.blend</code> at a glance — without opening anything.</p>
+  <p><strong>A Finder extension that adds a badge system to your file formats.</strong><br>
+  Small type-badges on file previews, so you can tell a <code>.psd</code> from a
+  <code>.png</code> at a glance — without opening anything.</p>
 </div>
 
 ---
 
-Badges overlays a little type-badge on files in your OS file browser. It's the
-designer/producer utility the built-in generic icons never gave you: see project
-files by kind, right in the window you're already looking at.
+Badges started as a way to visually tell apart lookalike files — a `.psd` from a `.png`,
+a working file from an export — right in the Finder window you're already looking at. It
+grew into a small system for **assigning icons to the formats you work with**.
 
-- **Free** and open source (MIT). Donate if it saves you time.
-- One badge per file, drawn by the OS file browser (never replaces the real preview).
-- Add your own formats and badges (no app update needed).
+- **Flexibility** — badge any format you like, not a fixed list.
+- **Organization** — see project files by kind at a glance, no opening required.
+- **Customization** — use the built-in badges, generate your own on-brand ones, or
+  upload your own art.
 
-## Platforms
+It's a native **FinderSync** extension (one badge per file, drawn by Finder — it never
+replaces the real preview) with a menu-bar app to manage everything. **Free** and open
+source (MIT).
 
-| Platform | Mechanism | Status |
-|----------|-----------|--------|
-| **macOS** | FinderSync extension | ✅ Working — [`platforms/macos`](platforms/macos) |
-| **Windows** | Explorer icon overlay handler | 🔜 Planned — [`platforms/windows`](platforms/windows) |
-| **Linux** | Nautilus / Dolphin extensions | 🔜 Planned — [`platforms/linux`](platforms/linux) |
+## Supported formats
 
-Each platform is a native shell integration (they can't share UI code), but they all
-read **one portable ruleset** so behaviour and artwork stay in sync.
+| Category | Formats |
+|----------|---------|
+| **Graphics** | Photoshop (`.psd` `.psb`), Illustrator (`.ai`), After Effects (`.aep`), Premiere (`.prproj`), PDF (`.pdf`), SVG (`.svg`) |
+| **Music** | MP3 (`.mp3`), WAV (`.wav`), FL Studio (`.flp`) |
+| **Video** | MP4 (`.mp4`), MKV (`.mkv`), MOV (`.mov`) |
+| **Images** | PNG (`.png`), HEIC (`.heic`) |
+| **3D** | Blender (`.blend`) |
 
-## Repo layout
-
-```
-platforms/
-  macos/     SwiftUI menu-bar app + FinderSync extension  (built)
-  windows/   design brief for the Explorer overlay handler
-  linux/     design brief for the file-manager extensions
-shared/
-  rules.default.json        the default ruleset (the original 6 badges)
-  schema/rules.schema.json  portable ruleset schema every platform reads
-  badges/                   1024px badge master art (psd, ai, pdf, svg, mp4, blend)
-PLAN.md      roadmap / source of truth for scope + phases
-```
+**➕ Add more, anytime.** Any extension you want, with a badge you **generate in-app**
+(house-style card + your colours + label) or **upload** yourself — no app update needed.
 
 ## Try it (macOS)
 
 > **Heads up:** there's **no one-click download yet.** Until the app is notarized
 > with an Apple *Developer ID*, a prebuilt binary won't launch on someone else's Mac
-> (Gatekeeper blocks it, and a dev-signed build only runs on the developer's own
-> machines). So for now Badges is **build-from-source** — a bit technical, but if
-> you're comfortable in the terminal it's ~2 minutes. A signed `.dmg` is coming.
+> (Gatekeeper blocks it). So for now Badges is **build-from-source** — a bit technical,
+> but ~2 minutes if you're comfortable in the terminal. A signed `.dmg` is coming.
 
 You need macOS 14.6+ and **full Xcode** installed (not just Command Line Tools).
 
@@ -77,13 +66,14 @@ open /Applications/Badges.app
 
 Then enable the extension in **System Settings → General → Login Items & Extensions
 → Finder**, and look for the **B** in your menu bar. Badges show on matching files
-in Finder. (Using Adobe Creative Cloud? Its Finder extension can hog the badge slot —
-disable *Core Sync* under the same Extensions pane if badges don't appear.)
+in Finder.
 
-Build details, dev loop, and gotchas: [`platforms/macos/README.md`](platforms/macos/README.md).
+> Using Adobe Creative Cloud? Its Finder extension can hog the badge slot — turn off
+> *Core Sync* under the same Extensions pane if badges don't appear. (Badges detects
+> this and links you straight there.)
 
 ## Status
 
 macOS is working and in active development. Next milestone: **Developer ID signing →
 notarized `.dmg` → landing page** so anyone can install it with a double-click (see
-[PLAN.md](PLAN.md)). Windows and Linux are scoped but not started.
+[PLAN.md](PLAN.md)).

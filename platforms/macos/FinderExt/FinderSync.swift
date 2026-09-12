@@ -36,6 +36,7 @@ class FinderSync: FIFinderSync {
         // so a write in the app fires these observers here.
         suite.addObserver(self, forKeyPath: BadgeStore.rulesDefaultsKey, options: [], context: nil)
         suite.addObserver(self, forKeyPath: BadgeStore.badgingEnabledDefaultsKey, options: [], context: nil)
+        suite.addObserver(self, forKeyPath: BadgeStore.fileBadgesDefaultsKey, options: [], context: nil)
 
         // Re-observe when drives are plugged in / ejected so a freshly mounted T7 gets
         // badged without relaunching Finder.
@@ -46,12 +47,33 @@ class FinderSync: FIFinderSync {
                        name: NSWorkspace.didUnmountNotification, object: nil)
         nc.addObserver(self, selector: #selector(volumesChanged),
                        name: NSWorkspace.didRenameVolumeNotification, object: nil)
+
+        // Re-rasterize badges when the user switches Light/Dark so appearance-aware
+        // art (e.g. the PNG badge: black outline in Light, white in Dark) stays legible
+        // on the Finder window background. The registered badge images are static
+        // bitmaps, so a theme flip needs a re-register — this observer triggers it.
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(appearanceChanged),
+            name: NSNotification.Name("AppleInterfaceThemeChangedNotification"), object: nil)
     }
 
     deinit {
         suite.removeObserver(self, forKeyPath: BadgeStore.rulesDefaultsKey)
         suite.removeObserver(self, forKeyPath: BadgeStore.badgingEnabledDefaultsKey)
+        suite.removeObserver(self, forKeyPath: BadgeStore.fileBadgesDefaultsKey)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
+        DistributedNotificationCenter.default().removeObserver(self)
+    }
+
+    @objc private func appearanceChanged(_ note: Notification) {
+        reload()
+    }
+
+    /// The system Light/Dark setting, resolved inside this headless extension (there's
+    /// no window/NSApp appearance to inherit). Absence of the global key means Light.
+    private static func systemAppearance() -> NSAppearance {
+        let isDark = (UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain)?["AppleInterfaceStyle"] as? String) == "Dark"
+        return NSAppearance(named: isDark ? .darkAqua : .aqua) ?? NSAppearance(named: .aqua)!
     }
 
     @objc private func volumesChanged(_ note: Notification) {
@@ -103,35 +125,48 @@ class FinderSync: FIFinderSync {
     /// silently stop rendering until Finder relaunches. Also dedupes registration
     /// when several rules share one image.
     private func registerBadges() {
+        // Resolve the appearance once so every badge is rasterized for the current
+        // Light/Dark mode (appearance-aware assets pick the right variant).
+        let appearance = Self.systemAppearance()
         var registered = Set<String>()
-        for rule in resolver.rules where !registered.contains(rule.badgeAsset) {
-            guard let image = BadgeImageLoader.image(for: rule) else {
-                NSLog("Badge asset missing: \(rule.badgeAsset)")
-                continue
+
+        func register(asset: String, isCustom: Bool, label: String) {
+            guard !registered.contains(asset) else { return }
+            let ref = BadgeRule(name: label, fileExtensions: [], badgeAsset: asset, isCustomImage: isCustom)
+            guard let image = BadgeImageLoader.image(for: ref) else {
+                NSLog("Badge asset missing: \(asset)")
+                return
             }
             controller.setBadgeImage(
-                Self.badgeSized(image),
-                label: rule.name,
-                forBadgeIdentifier: rule.badgeAsset
+                Self.badgeSized(image, appearance: appearance),
+                label: label,
+                forBadgeIdentifier: asset
             )
-            registered.insert(rule.badgeAsset)
+            registered.insert(asset)
+        }
+
+        for rule in resolver.rules {
+            register(asset: rule.badgeAsset, isCustom: rule.isCustomImage, label: rule.name)
         }
     }
 
     /// Finder badges are small overlays; our source art is 1024px. Hand Finder a
     /// modestly-sized copy (retina-friendly) so it reliably renders the overlay
-    /// instead of silently dropping an oversized image.
-    private static func badgeSized(_ image: NSImage, side: CGFloat = 128) -> NSImage {
+    /// instead of silently dropping an oversized image. Rasterized under `appearance`
+    /// so appearance-aware art (e.g. the PNG badge) picks its Light/Dark variant.
+    private static func badgeSized(_ image: NSImage, appearance: NSAppearance, side: CGFloat = 128) -> NSImage {
         let target = NSSize(width: side, height: side)
         let resized = NSImage(size: target)
         resized.lockFocus()
-        NSGraphicsContext.current?.imageInterpolation = .high
-        image.draw(
-            in: NSRect(origin: .zero, size: target),
-            from: NSRect(origin: .zero, size: image.size),
-            operation: .copy,
-            fraction: 1.0
-        )
+        appearance.performAsCurrentDrawingAppearance {
+            NSGraphicsContext.current?.imageInterpolation = .high
+            image.draw(
+                in: NSRect(origin: .zero, size: target),
+                from: NSRect(origin: .zero, size: image.size),
+                operation: .copy,
+                fraction: 1.0
+            )
+        }
         resized.unlockFocus()
         return resized
     }

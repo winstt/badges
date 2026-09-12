@@ -108,6 +108,8 @@ struct MenuPanel: View {
 struct ContentView: View {
     @ObservedObject var model: BadgeRulesModel
     @State private var editor: Editor?
+    @State private var adobeInstalled = false
+    @AppStorage("adobeWarningDismissed") private var adobeDismissed = false
 
     /// What the rule-editor sheet is doing right now.
     private enum Editor: Identifiable {
@@ -124,6 +126,10 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            if adobeInstalled && !adobeDismissed {
+                Divider()
+                adobeBanner
+            }
             Divider()
             List {
                 ForEach(model.orderedCategories, id: \.self) { category in
@@ -148,6 +154,42 @@ struct ContentView: View {
             case .edit(let rule): RuleEditorSheet(model: model, editing: rule)
             }
         }
+        .onAppear { adobeInstalled = AdobeConflict.adobeInstalled() }
+    }
+
+    /// Warns when Adobe Creative Cloud is installed: its Core Sync Finder extension can
+    /// hog the badge slot and hide ours. We can't disable it for the user from inside
+    /// the sandbox, so we deep-link them to the toggle.
+    private var adobeBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Adobe Creative Cloud can hide your badges")
+                    .font(.subheadline.weight(.semibold))
+                Text("Its “Core Sync” Finder extension takes over the badge slot. Turn it off under Finder extensions, then relaunch Finder.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 12) {
+                    Button("Open Finder Extensions…") { AdobeConflict.openExtensionSettings() }
+                        .controlSize(.small)
+                    Button("Recheck") { adobeInstalled = AdobeConflict.adobeInstalled() }
+                        .buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            Button {
+                adobeDismissed = true
+            } label: {
+                Image(systemName: "xmark")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("Dismiss")
+        }
+        .padding(12)
+        .background(Color.orange.opacity(0.10))
     }
 
     /// A collapsible category section header: chevron + name + rule count.
@@ -268,7 +310,7 @@ struct BadgeRuleRow: View {
     private var badgePreview: some View {
         Group {
             if let img = BadgeImageLoader.image(for: rule) {
-                Image(nsImage: img)
+                Image(badge: img)
                     .resizable()
                     .interpolation(.high)
                     .antialiased(true)

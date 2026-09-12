@@ -113,7 +113,7 @@ struct RuleEditorSheet: View {
                 RoundedRectangle(cornerRadius: 16).fill(.quaternary)
                 if let asset = badgeAsset,
                    let img = BadgeImageLoader.image(for: previewRule(asset)) {
-                    Image(nsImage: img)
+                    Image(badge: img)
                         .resizable().interpolation(.high).antialiased(true)
                         .scaledToFit().padding(10)
                 } else {
@@ -233,7 +233,7 @@ struct RuleEditorSheet: View {
         Group {
             if let img = BadgeImageLoader.image(for:
                 BadgeRule(name: "", fileExtensions: [], badgeAsset: asset, isCustomImage: custom)) {
-                Image(nsImage: img).resizable().interpolation(.high).antialiased(true).scaledToFit()
+                Image(badge: img).resizable().interpolation(.high).antialiased(true).scaledToFit()
             } else {
                 Image(systemName: "photo")
             }

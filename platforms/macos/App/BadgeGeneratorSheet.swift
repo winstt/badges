@@ -10,7 +10,8 @@ struct BadgeGeneratorSheet: View {
 
     @State private var glyph: String
     @State private var label: String
-    @State private var color: Color
+    @State private var outline: Color
+    @State private var fill: Color
 
     init(initialGlyph: String, initialLabel: String, onDone: @escaping (Data) -> Void) {
         self.initialGlyph = initialGlyph
@@ -18,11 +19,16 @@ struct BadgeGeneratorSheet: View {
         self.onDone = onDone
         _glyph = State(initialValue: initialGlyph)
         _label = State(initialValue: initialLabel)
-        _color = State(initialValue: Color(red: 0.35, green: 0.22, blue: 0.70))
+        // Defaults echo the real Illustrator badge: amber outline + dark maroon fill.
+        let amber = NSColor(deviceRed: 0.96, green: 0.65, blue: 0.14, alpha: 1)
+        let maroon = NSColor(deviceRed: 0.17, green: 0.04, blue: 0.04, alpha: 1)
+        _outline = State(initialValue: Color(amber))
+        _fill = State(initialValue: Color(maroon))
     }
 
     private var preview: NSImage? {
-        BadgeGenerator.makeImage(glyph: glyph, label: label, color: NSColor(color), side: 256)
+        BadgeGenerator.makeImage(glyph: glyph, label: label,
+                                 outline: NSColor(outline), fill: NSColor(fill), side: 256)
     }
 
     var body: some View {
@@ -32,7 +38,7 @@ struct BadgeGeneratorSheet: View {
             HStack(alignment: .top, spacing: 20) {
                 Group {
                     if let img = preview {
-                        Image(nsImage: img).resizable().interpolation(.high).scaledToFit()
+                        Image(badge: img).resizable().interpolation(.high).scaledToFit()
                     } else {
                         RoundedRectangle(cornerRadius: 12).fill(.quaternary)
                     }
@@ -40,9 +46,10 @@ struct BadgeGeneratorSheet: View {
                 .frame(width: 128, height: 128)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    field("Glyph (1–3 letters)", "Ae", $glyph)
-                    field("Label", "AEP", $label)
-                    ColorPicker("Colour", selection: $color, supportsOpacity: false)
+                    field("Glyph (1–3 letters)", "Ai", $glyph)
+                    field("Label", "AI", $label)
+                    ColorPicker("Outline & glyph", selection: $outline, supportsOpacity: false)
+                    ColorPicker("Inner fill", selection: $fill, supportsOpacity: false)
                 }
             }
 
@@ -52,7 +59,8 @@ struct BadgeGeneratorSheet: View {
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
                 Button("Use badge") {
-                    if let data = BadgeGenerator.makePNG(glyph: glyph, label: label, color: NSColor(color)) {
+                    if let data = BadgeGenerator.makePNG(glyph: glyph, label: label,
+                                                         outline: NSColor(outline), fill: NSColor(fill)) {
                         onDone(data)
                     }
                     dismiss()

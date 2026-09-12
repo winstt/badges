@@ -16,6 +16,69 @@ Rewrite of the 2025 "WorkFileBadges" prototype, done properly, released online.
 | v1 badge set | The original 6 (psd, ai, pdf, svg, mp4, blend) + **user can add more formats in-app** |
 | Naming | **Badges** everywhere. Targets: `Badges`, `BadgesFinderExt`, `BadgesThumbnail` |
 
+## 2026-09-10 — blockers resolved + quality fixes
+
+**Blockers now decided:**
+- **Adobe coexistence** → we will **natively detect the enabled Adobe FinderSync
+  extension and disable it** from the app (onboarding/auto step). Supersedes the earlier
+  "just document a manual toggle" option. *(TODO — build it.)*
+- **Distribution** → user **will pay for the Apple Developer Program**. Developer ID cert
+  + notarization + double-click DMG is a GO (reverses the 2026-09-04 "won't pay" note).
+  `scripts/make-dmg.sh` + `notarize.sh` can go live. No build-from-source workaround needed.
+
+**Quality fixes shipped:**
+- [x] **Crisp in-app previews.** `.interpolation(.high)` was silently ignored for
+  `Image(nsImage:)` on macOS → 1024px badge art downsampled with a low-quality filter,
+  looking pixelated in the list/editor/generator. Added `Image(badge:)`
+  (`App/BadgePreviewImage.swift`) which wraps the underlying `CGImage` via
+  `Image(decorative:scale:)` so interpolation is honored. Swapped all four preview sites.
+- [x] **PNG badge dark-mode.** Black outline vanished on dark backgrounds. Made
+  `pngBadge.imageset` **appearance-adaptive** (Light = black `pngBadge.png`, Dark = white
+  `pngBadge-dark.png` from `png white.png`). FinderSync now rasterizes badges under the
+  resolved system appearance and re-registers on `AppleInterfaceThemeChangedNotification`,
+  so the Finder overlay swaps too. *(Finder-overlay dark swap needs a manual Light/Dark
+  toggle test on-device.)*
+
+- [x] **Generator restyled to the real house style.** `BadgeGenerator` now renders a
+  portrait document card + folded top-right corner + **thick coloured outline** + **dark
+  inner fill** + coloured app glyph + white uppercase label — matching
+  `~/Desktop/BADGES/ai.png` (verified near 1:1). Text is **Myriad Pro Bold** with a
+  graceful fallback chain. `BadgeGeneratorSheet` now exposes two colour pickers
+  (outline & glyph / inner fill).
+
+- [x] **Per-file badges** — assign a chosen badge to specific individual files via
+  **Finder right-click → "Badge with ▸"** (and "Remove badge"). Implemented with
+  `FinderSync.menu(for: .contextualMenuForItems)` + `selectedItemURLs()`; the assignment
+  is a `[path → {asset, isCustom}]` map in the App Group (`BadgeStore.fileBadge(...)`),
+  checked in `requestBadgeIdentifier` **before** extension rules (per-file > rule order).
+  Override-only images are registered too. Caveat: keyed by absolute path, so it does not
+  follow a moved/renamed file — mitigate later with security-scoped bookmarks.
+
+- [x] **Per-file menu upgraded:** the "Badge with ▸" submenu now also lists **custom
+  (generated / uploaded) badges**; **"Remove badge"** now suppresses the file's badge
+  entirely (hidden state — even the format badge is gone), and a new **"Show default
+  badge"** clears the per-file setting back to the extension rule.
+- [x] **Adobe conflict — detect + guide.** `AdobeConflict` (App) detects Creative Cloud
+  via LaunchServices bundle-id lookup; the manager window shows a dismissible banner with
+  a button that deep-links to the Finder-extensions pane in System Settings. **NOTE:** a
+  sandboxed app *cannot* silently disable another vendor's Finder extension (macOS puts
+  that toggle behind the user's own click), so true one-click auto-disable is not possible
+  while `com.apple.security.app-sandbox` is on. To get real auto-disable we'd have to ship
+  the container app **unsandboxed** and shell out to `pluginkit -e ignore -i
+  com.adobe.accmac.ACCFinderSync` — a distribution/altitude decision still open.
+
+**Adobe decision (2026-09-10): Option A — stay sandboxed + guided disable.** Keep the
+detect-and-deep-link banner (shipped); do NOT unsandbox for `pluginkit` auto-disable
+(Adobe re-enables on every CC launch, so it's only temporary, and unsandboxing costs
+trust/security). Better future direction: research badge-slot **coexistence** instead of
+disabling Adobe.
+
+**Next:**
+- [ ] (research) Whether our FinderSync ext can coexist with / win the badge slot vs
+  Adobe Core Sync, instead of disabling it.
+- [ ] (nice-to-have) Surface / manage per-file assignments in the app UI too; make them
+  survive moves via bookmarks.
+
 ## Architecture (recap)
 
 - **Shared engine** (`Shared/`): `BadgeRule` (extensions → badge → corner), `BadgeStore`

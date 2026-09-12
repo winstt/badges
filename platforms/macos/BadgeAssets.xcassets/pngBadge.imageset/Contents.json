@@ -1,4 +1,19 @@
 {
-  "images" : [ { "idiom" : "universal", "filename" : "pngBadge.png" } ],
+  "images" : [
+    {
+      "idiom" : "universal",
+      "filename" : "pngBadge.png"
+    },
+    {
+      "idiom" : "universal",
+      "filename" : "pngBadge-dark.png",
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ]
+    }
+  ],
   "info" : { "author" : "xcode", "version" : 1 }
 }

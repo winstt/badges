@@ -200,6 +200,86 @@ final class BadgeStore: @unchecked Sendable {
         get { defaults.bool(forKey: didAutoCategorizeKey) }
         set { defaults.set(newValue, forKey: didAutoCategorizeKey) }
     }
+
+    // MARK: - Per-file badge overrides
+
+    /// A badge pinned to a specific individual file (by absolute path), independent of
+    /// its extension — set via the Finder right-click menu. Takes precedence over
+    /// extension rules. `isCustom` says whether `asset` is a shared-container image
+    /// (vs a bundled asset-catalog name), so the loader knows where to find it.
+    /// `hidden` means "draw no badge at all on this file" — it suppresses even the
+    /// extension/format badge (that's what "Remove badge" does).
+    struct FileBadge: Codable, Equatable {
+        var asset: String
+        var isCustom: Bool
+        var hidden: Bool
+
+        init(asset: String, isCustom: Bool, hidden: Bool = false) {
+            self.asset = asset; self.isCustom = isCustom; self.hidden = hidden
+        }
+
+        // Tolerate older entries written before `hidden` existed.
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            asset = try c.decode(String.self, forKey: .asset)
+            isCustom = try c.decode(Bool.self, forKey: .isCustom)
+            hidden = try c.decodeIfPresent(Bool.self, forKey: .hidden) ?? false
+        }
+    }
+
+    private let fileBadgesKey = "fileBadges"
+    /// KVO key so the extension re-registers/repaints when the map changes.
+    static var fileBadgesDefaultsKey: String { "fileBadges" }
+
+    func loadFileBadges() -> [String: FileBadge] {
+        guard let data = defaults.data(forKey: fileBadgesKey),
+              let map = try? JSONDecoder().decode([String: FileBadge].self, from: data)
+        else { return [:] }
+        return map
+    }
+
+    private func saveFileBadges(_ map: [String: FileBadge]) {
+        guard let data = try? JSONEncoder().encode(map) else { return }
+        defaults.set(data, forKey: fileBadgesKey)
+    }
+
+    /// The per-file badge for this exact path, if any. Path-keyed, so it doesn't follow
+    /// a moved/renamed file (a known limitation — bookmarks would fix it later).
+    func fileBadge(for path: String) -> FileBadge? { loadFileBadges()[path] }
+
+    /// Pin `asset` onto each of `paths` (overwrites any existing per-file badge there).
+    func setFileBadge(paths: [String], asset: String, isCustom: Bool) {
+        var map = loadFileBadges()
+        for p in paths { map[p] = FileBadge(asset: asset, isCustom: isCustom) }
+        saveFileBadges(map)
+    }
+
+    /// Mark each of `paths` as "no badge at all" — suppresses the extension/format badge
+    /// too. This is "Remove badge" in the Finder menu.
+    func suppressFileBadge(paths: [String]) {
+        var map = loadFileBadges()
+        for p in paths { map[p] = FileBadge(asset: "", isCustom: false, hidden: true) }
+        saveFileBadges(map)
+    }
+
+    /// Forget any per-file setting on each of `paths` (files fall back to extension
+    /// rules — i.e. show their default format badge again).
+    func removeFileBadges(paths: [String]) {
+        var map = loadFileBadges()
+        for p in paths { map.removeValue(forKey: p) }
+        saveFileBadges(map)
+    }
+
+    /// Filenames of every custom badge image in the shared container (generated or
+    /// uploaded). Used to offer them as per-file badge choices in the Finder menu.
+    func customBadgeFilenames() -> [String] {
+        let items = (try? FileManager.default.contentsOfDirectory(
+            at: customBadgesURL, includingPropertiesForKeys: nil)) ?? []
+        return items
+            .filter { $0.pathExtension.lowercased() == "png" }
+            .map { $0.lastPathComponent }
+            .sorted()
+    }
 }
 
 extension BadgeRule {
