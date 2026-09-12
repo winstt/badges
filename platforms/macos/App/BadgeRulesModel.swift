@@ -21,6 +21,11 @@ final class BadgeRulesModel: ObservableObject {
         didSet { store.collapsedCategories = collapsedCategories }
     }
 
+    /// User-made categories that may not have rules yet (so they still show as sections).
+    @Published var customCategories: [String] {
+        didSet { store.customCategories = customCategories }
+    }
+
     private let store: BadgeStore
 
     init(store: BadgeStore = .shared) {
@@ -28,6 +33,7 @@ final class BadgeRulesModel: ObservableObject {
         self.rules = store.loadRules()
         self.badgingEnabled = store.badgingEnabled
         self.collapsedCategories = store.collapsedCategories
+        self.customCategories = store.customCategories
 
         // One-time migration: rules created before categories existed decode as "Other".
         // Sort them into known categories once (never touches deliberately-set ones after).
@@ -99,10 +105,32 @@ final class BadgeRulesModel: ObservableObject {
 
     // MARK: Categories
 
-    /// Distinct categories in first-appearance order — the order sections are shown in.
+    /// The canonical category order sections are shown in. Anything else (e.g. "Other"
+    /// or a user-made category) follows, in the order it first appears.
+    static let preferredCategoryOrder = ["Graphics", "Images", "Video", "Music", "3D"]
+
+    /// Categories to show as sections: those used by rules plus any empty user-made
+    /// ones, sorted into `preferredCategoryOrder` with the rest appended.
     var orderedCategories: [String] {
         var seen = Set<String>()
-        return rules.compactMap { seen.insert($0.category).inserted ? $0.category : nil }
+        var cats: [String] = []
+        for rule in rules where seen.insert(rule.category).inserted { cats.append(rule.category) }
+        for c in customCategories where seen.insert(c).inserted { cats.append(c) }
+        return cats.enumerated().sorted { lhs, rhs in
+            let rank = { (name: String, appearance: Int) -> Int in
+                Self.preferredCategoryOrder.firstIndex(of: name)
+                    ?? (Self.preferredCategoryOrder.count + appearance)
+            }
+            return rank(lhs.element, lhs.offset) < rank(rhs.element, rhs.offset)
+        }.map { $0.element }
+    }
+
+    /// Create an empty category (from "+ New category"); it shows as a section you can
+    /// then drop rules into. No-op for blank or already-existing names.
+    func addCategory(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, !orderedCategories.contains(trimmed) else { return }
+        customCategories.append(trimmed)
     }
 
     /// Rules in one category, preserving their global (priority) order.

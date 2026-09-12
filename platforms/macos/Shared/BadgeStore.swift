@@ -193,6 +193,14 @@ final class BadgeStore: @unchecked Sendable {
         set { defaults.set(Array(newValue), forKey: collapsedCategoriesKey) }
     }
 
+    /// User-created categories that may not have any rules yet (so they'd otherwise not
+    /// appear, since sections are derived from rules). Added via "+ New category".
+    private let customCategoriesKey = "customCategories"
+    var customCategories: [String] {
+        get { defaults.stringArray(forKey: customCategoriesKey) ?? [] }
+        set { defaults.set(newValue, forKey: customCategoriesKey) }
+    }
+
     /// Set once we've run the one-time "sort existing rules into categories" migration,
     /// so it doesn't re-run and clobber a category the user deliberately set to "Other".
     private let didAutoCategorizeKey = "didAutoCategorize"
