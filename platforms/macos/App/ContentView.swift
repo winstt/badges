@@ -174,6 +174,17 @@ struct ContentView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if category != BadgeRule.uncategorized {
+                let count = model.ruleCount(in: category)
+                Button(role: .destructive) {
+                    model.removeCategory(category)
+                } label: {
+                    Label(count > 0 ? "Remove category (\(count) → Other)" : "Remove category",
+                          systemImage: "trash")
+                }
+            }
+        }
     }
 
     private func ruleRow(_ rule: BadgeRule) -> some View {

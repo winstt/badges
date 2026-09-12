@@ -133,6 +133,25 @@ final class BadgeRulesModel: ObservableObject {
         customCategories.append(trimmed)
     }
 
+    /// Remove a category. No badges are deleted — any rules in it move to "Other" (so
+    /// they stay visible and can be re-categorized). Also drops it from the user-made
+    /// and collapsed sets.
+    func removeCategory(_ name: String) {
+        guard name != BadgeRule.uncategorized else { return }
+        if rules.contains(where: { $0.category == name }) {
+            var updated = rules
+            for i in updated.indices where updated[i].category == name {
+                updated[i].category = BadgeRule.uncategorized
+            }
+            rules = updated   // one save instead of one per rule
+        }
+        customCategories.removeAll { $0 == name }
+        collapsedCategories.remove(name)
+    }
+
+    /// Number of badges in a category — used to warn before removing a non-empty one.
+    func ruleCount(in category: String) -> Int { rules(in: category).count }
+
     /// Rules in one category, preserving their global (priority) order.
     func rules(in category: String) -> [BadgeRule] {
         rules.filter { $0.category == category }
