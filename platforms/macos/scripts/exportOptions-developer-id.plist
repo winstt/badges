@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Direct web distribution outside the Mac App Store. -->
+	<key>method</key>
+	<string>developer-id</string>
+	<!-- Let Xcode manage the Developer ID cert + provisioning profile (needed because
+	     the app + extension share an App Group). Override TEAM_ID via the release
+	     script if your paid membership's Team ID differs from the default. -->
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>teamID</key>
+	<string>ATQ3U47NSK</string>
+	<key>destination</key>
+	<string>export</string>
+</dict>
+</plist>
