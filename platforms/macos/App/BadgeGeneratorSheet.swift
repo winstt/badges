@@ -1,7 +1,8 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
-/// Small panel that renders an on-brand badge from a glyph + label + colour, with a
-/// live preview. Hands back PNG data when the user accepts it.
+/// Small panel that renders an on-brand badge from a glyph (or uploaded logo) + label +
+/// colours, with a live preview. Hands back PNG data when the user accepts it.
 struct BadgeGeneratorSheet: View {
     let initialGlyph: String
     let initialLabel: String
@@ -12,6 +13,9 @@ struct BadgeGeneratorSheet: View {
     @State private var label: String
     @State private var outline: Color
     @State private var fill: Color
+    @State private var labelColor: Color
+    @State private var logo: NSImage?
+    @State private var importingLogo = false
 
     init(initialGlyph: String, initialLabel: String, onDone: @escaping (Data) -> Void) {
         self.initialGlyph = initialGlyph
@@ -24,11 +28,13 @@ struct BadgeGeneratorSheet: View {
         let maroon = NSColor(deviceRed: 0.17, green: 0.04, blue: 0.04, alpha: 1)
         _outline = State(initialValue: Color(amber))
         _fill = State(initialValue: Color(maroon))
+        _labelColor = State(initialValue: .white)
     }
 
     private var preview: NSImage? {
         BadgeGenerator.makeImage(glyph: glyph, label: label,
-                                 outline: NSColor(outline), fill: NSColor(fill), side: 256)
+                                 outline: NSColor(outline), fill: NSColor(fill),
+                                 labelColor: NSColor(labelColor), logo: logo, side: 256)
     }
 
     var body: some View {
@@ -46,10 +52,24 @@ struct BadgeGeneratorSheet: View {
                 .frame(width: 128, height: 128)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    field("Glyph (1–3 letters)", "Ai", $glyph)
+                    // A logo replaces the glyph letters; hide the glyph field while one's set.
+                    if logo == nil {
+                        field("Glyph (1–3 letters)", "Ai", $glyph)
+                    } else {
+                        logoRow
+                    }
                     field("Label", "AI", $label)
                     ColorPicker("Outline & glyph", selection: $outline, supportsOpacity: false)
                     ColorPicker("Inner fill", selection: $fill, supportsOpacity: false)
+                    ColorPicker("Text", selection: $labelColor, supportsOpacity: false)
+                    if logo == nil {
+                        Button {
+                            importingLogo = true
+                        } label: {
+                            Label("Upload logo…", systemImage: "photo.badge.plus")
+                        }
+                        .controlSize(.small)
+                    }
                 }
             }
 
@@ -60,19 +80,47 @@ struct BadgeGeneratorSheet: View {
                     .keyboardShortcut(.cancelAction)
                 Button("Use badge") {
                     if let data = BadgeGenerator.makePNG(glyph: glyph, label: label,
-                                                         outline: NSColor(outline), fill: NSColor(fill)) {
+                                                         outline: NSColor(outline), fill: NSColor(fill),
+                                                         labelColor: NSColor(labelColor), logo: logo) {
                         onDone(data)
                     }
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
-                .disabled(glyph.trimmingCharacters(in: .whitespaces).isEmpty
+                .disabled(logo == nil
+                          && glyph.trimmingCharacters(in: .whitespaces).isEmpty
                           && label.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
         .padding(20)
         .frame(width: 440)
+        .fileImporter(isPresented: $importingLogo,
+                      allowedContentTypes: [.png, .jpeg, .image],
+                      allowsMultipleSelection: false) { handleLogoImport($0) }
+    }
+
+    /// Shows the picked logo with a button to swap it out for the glyph again.
+    private var logoRow: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Logo").font(.caption).foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                if let logo { Image(badge: logo).resizable().scaledToFit().frame(width: 22, height: 22) }
+                Button {
+                    logo = nil
+                } label: {
+                    Label("Remove logo", systemImage: "xmark.circle")
+                }
+                .controlSize(.small)
+            }
+        }
+    }
+
+    private func handleLogoImport(_ result: Result<[URL], Error>) {
+        guard case let .success(urls) = result, let url = urls.first else { return }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        if let img = NSImage(contentsOf: url) { logo = img }
     }
 
     private func field(_ label: String, _ placeholder: String, _ text: Binding<String>) -> some View {

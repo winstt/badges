@@ -7,8 +7,10 @@ import AppKit
 /// same look as the bundled PSD ("Ps"/"PSD") and AI ("Ai"/"AI") art.
 enum BadgeGenerator {
 
-    /// Full control: separate outline (also the glyph colour) and inner fill.
+    /// Full control: separate outline (also the glyph colour) and inner fill, a label
+    /// colour, and an optional logo image drawn in place of the glyph text.
     static func makePNG(glyph: String, label: String, outline: NSColor, fill: NSColor,
+                        labelColor: NSColor = .white, logo: NSImage? = nil,
                         side: CGFloat = 1024) -> Data? {
         guard let rep = NSBitmapImageRep(
             bitmapDataPlanes: nil, pixelsWide: Int(side), pixelsHigh: Int(side),
@@ -39,10 +41,15 @@ enum BadgeGenerator {
         path.lineJoinStyle = .round
         path.stroke()
 
-        // Big app glyph (e.g. "Ai") in the outline colour, sitting in the upper half.
-        drawText(glyph, in: rect, sizeFactor: 0.42, color: stroke, yFraction: 0.60)
-        // File-type label (e.g. "AI") in white along the bottom.
-        drawText(label.uppercased(), in: rect, sizeFactor: 0.18, color: .white, yFraction: 0.20)
+        // An uploaded logo (if any) sits where the glyph would; otherwise the big app
+        // glyph (e.g. "Ai") in the outline colour, in the upper half.
+        if let logo {
+            drawLogo(logo, in: rect, heightFactor: 0.42, yFraction: 0.60)
+        } else {
+            drawText(glyph, in: rect, sizeFactor: 0.42, color: stroke, yFraction: 0.60)
+        }
+        // File-type label (e.g. "AI") along the bottom, in the chosen label colour.
+        drawText(label.uppercased(), in: rect, sizeFactor: 0.18, color: labelColor, yFraction: 0.20)
 
         NSGraphicsContext.restoreGraphicsState()
         return rep.representation(using: .png, properties: [:])
@@ -55,8 +62,10 @@ enum BadgeGenerator {
     }
 
     static func makeImage(glyph: String, label: String, outline: NSColor, fill: NSColor,
+                          labelColor: NSColor = .white, logo: NSImage? = nil,
                           side: CGFloat = 256) -> NSImage? {
-        makePNG(glyph: glyph, label: label, outline: outline, fill: fill, side: side).flatMap { NSImage(data: $0) }
+        makePNG(glyph: glyph, label: label, outline: outline, fill: fill,
+                labelColor: labelColor, logo: logo, side: side).flatMap { NSImage(data: $0) }
     }
 
     static func makeImage(glyph: String, label: String, color: NSColor, side: CGFloat = 256) -> NSImage? {
@@ -95,6 +104,23 @@ enum BadgeGenerator {
                     to: NSPoint(x: rect.maxX, y: rect.maxY), radius: radius) // left + TL
         p.close()
         return p
+    }
+
+    // MARK: - Logo
+
+    /// Draw an uploaded logo aspect-fit into the glyph area, centred at `yFraction`.
+    private static func drawLogo(_ image: NSImage, in rect: NSRect,
+                                 heightFactor: CGFloat, yFraction: CGFloat) {
+        let src = image.size
+        guard src.width > 0, src.height > 0 else { return }
+        let maxH = rect.height * heightFactor
+        let maxW = rect.width * 0.64
+        let scale = min(maxW / src.width, maxH / src.height)
+        let w = src.width * scale, h = src.height * scale
+        let box = NSRect(x: rect.midX - w / 2,
+                         y: rect.minY + rect.height * yFraction - h / 2,
+                         width: w, height: h)
+        image.draw(in: box, from: .zero, operation: .sourceOver, fraction: 1)
     }
 
     // MARK: - Text

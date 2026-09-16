@@ -141,9 +141,11 @@ struct ContentView: View {
                 }
             }
             .listStyle(.inset)
+            .scrollContentBackground(.hidden)   // let the glass show through the list
             Divider()
             footer
         }
+        .background(VisualEffectView().ignoresSafeArea())
         .sheet(item: $editor) { which in
             switch which {
             case .create: RuleEditorSheet(model: model)
@@ -223,16 +225,9 @@ struct ContentView: View {
 
     private var header: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Badges")
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
-                Text("Top of the list wins when a file matches more than one")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
             Toggle("Badging on", isOn: $model.badgingEnabled)
                 .toggleStyle(.switch)
+            Spacer()
             // TODO: point at the real donate page once the repo/sponsors is live.
             Link(destination: URL(string: "https://github.com/sponsors")!) {
                 Label("Donate", systemImage: "heart.fill")
@@ -308,5 +303,28 @@ struct BadgeRuleRow: View {
 
     private var enabledBinding: Binding<Bool> {
         Binding(get: { rule.isEnabled }, set: { _ in model.toggle(rule) })
+    }
+}
+
+// MARK: - Glass background
+
+/// A translucent, blur-behind material for the manager window — the "liquid glass" look.
+/// On macOS 26 the system renders these materials with the Liquid Glass treatment; on
+/// earlier releases it's the classic vibrancy blur. Adapts to Light/Dark automatically.
+struct VisualEffectView: NSViewRepresentable {
+    var material: NSVisualEffectView.Material = .underWindowBackground
+    var blending: NSVisualEffectView.BlendingMode = .behindWindow
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blending
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {
+        view.material = material
+        view.blendingMode = blending
     }
 }
