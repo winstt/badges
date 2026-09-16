@@ -11,6 +11,7 @@ enum BadgeGenerator {
     /// colour, and an optional logo image drawn in place of the glyph text.
     static func makePNG(glyph: String, label: String, outline: NSColor, fill: NSColor,
                         labelColor: NSColor = .white, logo: NSImage? = nil,
+                        glyphColor: NSColor? = nil, glyphWeight: NSFont.Weight = .bold,
                         side: CGFloat = 1024) -> Data? {
         guard let rep = NSBitmapImageRep(
             bitmapDataPlanes: nil, pixelsWide: Int(side), pixelsHigh: Int(side),
@@ -46,7 +47,10 @@ enum BadgeGenerator {
         if let logo {
             drawLogo(logo, in: rect, heightFactor: 0.42, yFraction: 0.60)
         } else {
-            drawText(glyph, in: rect, sizeFactor: 0.42, color: stroke, yFraction: 0.60)
+            // Glyph colour defaults to the outline colour (the house look); weight is
+            // user-adjustable.
+            let gColor = (glyphColor ?? outline).usingColorSpace(.deviceRGB) ?? stroke
+            drawText(glyph, in: rect, sizeFactor: 0.42, color: gColor, yFraction: 0.60, weight: glyphWeight)
         }
         // File-type label (e.g. "AI") along the bottom, in the chosen label colour.
         drawText(label.uppercased(), in: rect, sizeFactor: 0.18, color: labelColor, yFraction: 0.20)
@@ -63,9 +67,11 @@ enum BadgeGenerator {
 
     static func makeImage(glyph: String, label: String, outline: NSColor, fill: NSColor,
                           labelColor: NSColor = .white, logo: NSImage? = nil,
+                          glyphColor: NSColor? = nil, glyphWeight: NSFont.Weight = .bold,
                           side: CGFloat = 256) -> NSImage? {
         makePNG(glyph: glyph, label: label, outline: outline, fill: fill,
-                labelColor: labelColor, logo: logo, side: side).flatMap { NSImage(data: $0) }
+                labelColor: labelColor, logo: logo, glyphColor: glyphColor,
+                glyphWeight: glyphWeight, side: side).flatMap { NSImage(data: $0) }
     }
 
     static func makeImage(glyph: String, label: String, color: NSColor, side: CGFloat = 256) -> NSImage? {
@@ -125,27 +131,43 @@ enum BadgeGenerator {
 
     // MARK: - Text
 
-    /// The house font is **Myriad Pro Bold** (the Adobe badge font). Fall back through
-    /// its other weights, then to a heavy system font, so generation still works on
-    /// machines without the full Adobe font set installed.
-    static func badgeFont(ofSize size: CGFloat) -> NSFont {
-        for name in ["MyriadPro-Bold", "MyriadPro-Semibold"] {
+    /// The house font is **Myriad Pro** (the Adobe badge font) at the requested weight.
+    /// Falls back to the nearest available Myriad Pro variant, then a same-weight system
+    /// font, so generation still works on machines without the full Adobe font set.
+    static func badgeFont(ofSize size: CGFloat, weight: NSFont.Weight = .bold) -> NSFont {
+        // Preferred Myriad Pro variant per weight bucket, each with lighter fallbacks.
+        let candidates: [String]
+        switch weight {
+        case .ultraLight, .thin, .light:
+            candidates = ["MyriadPro-Light", "MyriadPro-Regular"]
+        case .regular, .medium:
+            candidates = ["MyriadPro-Regular", "MyriadPro-Semibold"]
+        case .semibold:
+            candidates = ["MyriadPro-Semibold", "MyriadPro-Bold", "MyriadPro-Regular"]
+        case .heavy, .black:
+            candidates = ["MyriadPro-Black", "MyriadPro-Bold", "MyriadPro-Semibold"]
+        default: // .bold
+            candidates = ["MyriadPro-Bold", "MyriadPro-Semibold"]
+        }
+        for name in candidates {
             if let f = NSFont(name: name, size: size) { return f }
         }
-        if let regular = NSFont(name: "MyriadPro-Regular", size: size) {
-            let bold = NSFontManager.shared.convert(regular, toHaveTrait: .boldFontMask)
-            return bold
+        // Only Myriad Pro Regular installed but a bold-ish weight asked → synthesize bold.
+        if weight != .regular, weight != .light, let regular = NSFont(name: "MyriadPro-Regular", size: size) {
+            return NSFontManager.shared.convert(regular, toHaveTrait: .boldFontMask)
         }
-        return NSFont.systemFont(ofSize: size, weight: .bold)
+        if let regular = NSFont(name: "MyriadPro-Regular", size: size) { return regular }
+        return NSFont.systemFont(ofSize: size, weight: weight)
     }
 
     private static func drawText(_ string: String, in rect: NSRect,
-                                 sizeFactor: CGFloat, color: NSColor, yFraction: CGFloat) {
+                                 sizeFactor: CGFloat, color: NSColor, yFraction: CGFloat,
+                                 weight: NSFont.Weight = .bold) {
         guard !string.isEmpty else { return }
         let para = NSMutableParagraphStyle(); para.alignment = .center
         func attributed(_ size: CGFloat) -> NSAttributedString {
             NSAttributedString(string: string, attributes: [
-                .font: badgeFont(ofSize: size),
+                .font: badgeFont(ofSize: size, weight: weight),
                 .foregroundColor: color,
                 .paragraphStyle: para,
             ])

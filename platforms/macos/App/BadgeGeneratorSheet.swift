@@ -1,6 +1,21 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// Glyph thickness options, mapped to Myriad Pro weights (with system fallbacks).
+enum GlyphWeight: String, CaseIterable, Identifiable {
+    case light = "Light", regular = "Regular", semibold = "Semibold", bold = "Bold", black = "Black"
+    var id: String { rawValue }
+    var ns: NSFont.Weight {
+        switch self {
+        case .light: return .light
+        case .regular: return .regular
+        case .semibold: return .semibold
+        case .bold: return .bold
+        case .black: return .black
+        }
+    }
+}
+
 /// Small panel that renders an on-brand badge from a glyph (or uploaded logo) + label +
 /// colours, with a live preview. Hands back PNG data when the user accepts it.
 struct BadgeGeneratorSheet: View {
@@ -14,6 +29,8 @@ struct BadgeGeneratorSheet: View {
     @State private var outline: Color
     @State private var fill: Color
     @State private var labelColor: Color
+    @State private var glyphColor: Color
+    @State private var glyphWeight: GlyphWeight = .bold
     @State private var logo: NSImage?
     @State private var importingLogo = false
 
@@ -23,18 +40,20 @@ struct BadgeGeneratorSheet: View {
         self.onDone = onDone
         _glyph = State(initialValue: initialGlyph)
         _label = State(initialValue: initialLabel)
-        // Defaults echo the real Illustrator badge: amber outline + dark maroon fill.
+        // Defaults echo the real Illustrator badge: amber outline + glyph + dark maroon fill.
         let amber = NSColor(deviceRed: 0.96, green: 0.65, blue: 0.14, alpha: 1)
         let maroon = NSColor(deviceRed: 0.17, green: 0.04, blue: 0.04, alpha: 1)
         _outline = State(initialValue: Color(amber))
         _fill = State(initialValue: Color(maroon))
         _labelColor = State(initialValue: .white)
+        _glyphColor = State(initialValue: Color(amber))
     }
 
     private var preview: NSImage? {
         BadgeGenerator.makeImage(glyph: glyph, label: label,
                                  outline: NSColor(outline), fill: NSColor(fill),
-                                 labelColor: NSColor(labelColor), logo: logo, side: 256)
+                                 labelColor: NSColor(labelColor), logo: logo,
+                                 glyphColor: NSColor(glyphColor), glyphWeight: glyphWeight.ns, side: 256)
     }
 
     var body: some View {
@@ -59,7 +78,14 @@ struct BadgeGeneratorSheet: View {
                         logoRow
                     }
                     field("Label", "AI", $label)
-                    ColorPicker("Outline & glyph", selection: $outline, supportsOpacity: false)
+                    ColorPicker("Outline", selection: $outline, supportsOpacity: false)
+                    if logo == nil {
+                        ColorPicker("Glyph", selection: $glyphColor, supportsOpacity: false)
+                        Picker("Glyph weight", selection: $glyphWeight) {
+                            ForEach(GlyphWeight.allCases) { Text($0.rawValue).tag($0) }
+                        }
+                        .pickerStyle(.menu)
+                    }
                     ColorPicker("Inner fill", selection: $fill, supportsOpacity: false)
                     ColorPicker("Text", selection: $labelColor, supportsOpacity: false)
                     if logo == nil {
@@ -81,7 +107,9 @@ struct BadgeGeneratorSheet: View {
                 Button("Use badge") {
                     if let data = BadgeGenerator.makePNG(glyph: glyph, label: label,
                                                          outline: NSColor(outline), fill: NSColor(fill),
-                                                         labelColor: NSColor(labelColor), logo: logo) {
+                                                         labelColor: NSColor(labelColor), logo: logo,
+                                                         glyphColor: NSColor(glyphColor),
+                                                         glyphWeight: glyphWeight.ns) {
                         onDone(data)
                     }
                     dismiss()
