@@ -371,3 +371,11 @@ Goal: badge in any corner, two badges stacked (type + personal/company logo).
    is the opt-in signal).
 4. **macOS updates** can shift FinderSync behavior; original targeted macOS 14.6+,
    we keep that floor.
+5. **macOS 26 "Tahoe" badge-overlay regression (2026-09-19)** — community reports (e.g.
+   Dropbox) that Finder badge icons are flaky/broken on Tahoe for **both legacy FinderSync
+   and File Provider**. So some "badges don't show" behaviour may be an **OS-level bug, not
+   ours** (ours currently work on the dev Mac). Not fixable from our side; mitigate with the
+   manual Refresh, set tester expectations, and watch for Apple fixes. NOTE: File Provider
+   is **not** an alternative for us — it's for apps that own/sync a directory; Badges
+   type-badges arbitrary existing files, so FinderSync is the only applicable API (and it
+   is **not** deprecated — no build warnings against our SDK).
