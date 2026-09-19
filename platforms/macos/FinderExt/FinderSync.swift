@@ -66,7 +66,7 @@ class FinderSync: FIFinderSync {
     }
 
     @objc private func appearanceChanged(_ note: Notification) {
-        reload()
+        scheduleReload()
     }
 
     /// The system Light/Dark setting, resolved inside this headless extension (there's
@@ -100,7 +100,16 @@ class FinderSync: FIFinderSync {
         change: [NSKeyValueChangeKey: Any]?,
         context: UnsafeMutableRawPointer?
     ) {
-        reload()
+        // Cross-process KVO can fire off the main thread; all FIFinderSyncController
+        // calls (setBadgeImage / directoryURLs) must happen on the main thread.
+        scheduleReload()
+    }
+
+    /// Coalesce reloads onto the main thread. A rapid on/off toggle can fire several
+    /// KVO notifications; hopping to main serializes them and keeps Finder consistent.
+    private func scheduleReload() {
+        if Thread.isMainThread { reload() }
+        else { DispatchQueue.main.async { [weak self] in self?.reload() } }
     }
 
     /// Rebuild from the current store and re-register images. Newly disabled rules
@@ -177,7 +186,11 @@ class FinderSync: FIFinderSync {
     /// is the only badging path that works: a sandboxed extension can't enumerate the
     /// directory itself (Finder brokers access per-URL through this callback).
     override func requestBadgeIdentifier(for url: URL) {
-        guard let rule = resolver.finderSyncBadge(for: url) else { return }
-        controller.setBadgeIdentifier(rule.badgeAsset, for: url)
+        // Always set an identifier: the matching badge, or "" to *clear* it. Returning
+        // without setting leaves Finder's cached badge in place, so a file would keep a
+        // stale badge after badging is switched off (or after it stops matching a rule).
+        // An empty identifier removes any existing overlay.
+        let identifier = resolver.finderSyncBadge(for: url)?.badgeAsset ?? ""
+        controller.setBadgeIdentifier(identifier, for: url)
     }
 }
