@@ -67,6 +67,13 @@ Rewrite of the 2025 "WorkFileBadges" prototype, done properly, released online.
   the container app **unsandboxed** and shell out to `pluginkit -e ignore -i
   com.adobe.accmac.ACCFinderSync` — a distribution/altitude decision still open.
 
+**Distribution decision (2026-09-19): Mac App Store.** Pivot from direct-DMG-first to
+**Mac App Store** as the primary channel (one-click install, auto-updates, trust; FinderSync
+apps are allowed there). App is already sandboxed + category-tagged. Runbook:
+`platforms/macos/APPSTORE.md`. Direct-DMG tooling (`release.sh`) kept as an optional
+secondary channel. Key gotcha: if the paid Team ID ≠ ATQ3U47NSK, update
+`BadgeStore.appGroupID` + `DEVELOPMENT_TEAM`.
+
 **Adobe decision (2026-09-10): Option A — stay sandboxed + guided disable.** Keep the
 detect-and-deep-link banner (shipped); do NOT unsandbox for `pluginkit` auto-disable
 (Adobe re-enables on every CC launch, so it's only temporary, and unsandboxing costs
