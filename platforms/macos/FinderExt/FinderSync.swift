@@ -212,7 +212,8 @@ class FinderSync: FIFinderSync {
         guard menuKind == .toolbarItemMenu else { return nil }
         let menu = NSMenu(title: "Badges")
 
-        let toggle = NSMenuItem(title: "Badging on", action: #selector(toggleBadging(_:)), keyEquivalent: "")
+        // "Badging" with a checkmark that reflects (and toggles) the on/off state.
+        let toggle = NSMenuItem(title: "Badging", action: #selector(toggleBadging(_:)), keyEquivalent: "")
         toggle.target = self
         toggle.state = BadgeStore.shared.badgingEnabled ? .on : .off
         menu.addItem(toggle)

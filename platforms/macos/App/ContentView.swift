@@ -8,6 +8,9 @@ struct MenuPanel: View {
     @ObservedObject var model: BadgeRulesModel
     @Environment(\.openWindow) private var openWindow
 
+    /// Drives the smooth open animation each time the panel appears.
+    @State private var shown = false
+
     var body: some View {
         VStack(spacing: 0) {
             panelHeader
@@ -17,6 +20,14 @@ struct MenuPanel: View {
             panelFooter
         }
         .frame(width: 300)
+        .opacity(shown ? 1 : 0)
+        .scaleEffect(shown ? 1 : 0.97, anchor: .top)
+        .offset(y: shown ? 0 : -6)
+        .onAppear {
+            shown = false
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { shown = true }
+        }
+        .onDisappear { shown = false }
     }
 
     private var panelHeader: some View {
@@ -225,7 +236,7 @@ struct ContentView: View {
 
     private var header: some View {
         HStack {
-            Toggle("Badging on", isOn: $model.badgingEnabled)
+            Toggle("Badging", isOn: $model.badgingEnabled)
                 .toggleStyle(.switch)
             Spacer()
             // TODO: point at the real donate page once the repo/sponsors is live.
