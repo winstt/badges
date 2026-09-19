@@ -163,7 +163,7 @@ class FinderSync: FIFinderSync {
     /// modestly-sized copy (retina-friendly) so it reliably renders the overlay
     /// instead of silently dropping an oversized image. Rasterized under `appearance`
     /// so appearance-aware art (e.g. the PNG badge) picks its Light/Dark variant.
-    private static func badgeSized(_ image: NSImage, appearance: NSAppearance, side: CGFloat = 128) -> NSImage {
+    private static func badgeSized(_ image: NSImage, appearance: NSAppearance, side: CGFloat = 256) -> NSImage {
         let target = NSSize(width: side, height: side)
         let resized = NSImage(size: target)
         resized.lockFocus()
@@ -192,5 +192,53 @@ class FinderSync: FIFinderSync {
         // An empty identifier removes any existing overlay.
         let identifier = resolver.finderSyncBadge(for: url)?.badgeAsset ?? ""
         controller.setBadgeIdentifier(identifier, for: url)
+    }
+
+    // MARK: - Toolbar button
+
+    /// A Badges button in the Finder toolbar. Clicking it opens a small menu (see
+    /// `menu(for: .toolbarItemMenu)`) with a quick on/off toggle + "Open Badges".
+    override var toolbarItemName: String { "Badges" }
+    override var toolbarItemToolTip: String { "Turn Badges on/off, or open the app" }
+    override var toolbarItemImage: NSImage {
+        NSImage(named: "MenuBarB")
+            ?? NSImage(systemSymbolName: "tag.circle", accessibilityDescription: "Badges")
+            ?? NSImage()
+    }
+
+    /// The toolbar button's dropdown. Scoped to the toolbar only — no contextual (per-
+    /// file) menu is offered.
+    override func menu(for menuKind: FIMenuKind) -> NSMenu? {
+        guard menuKind == .toolbarItemMenu else { return nil }
+        let menu = NSMenu(title: "Badges")
+
+        let toggle = NSMenuItem(title: "Badging on", action: #selector(toggleBadging(_:)), keyEquivalent: "")
+        toggle.target = self
+        toggle.state = BadgeStore.shared.badgingEnabled ? .on : .off
+        menu.addItem(toggle)
+
+        menu.addItem(.separator())
+
+        let open = NSMenuItem(title: "Open Badges…", action: #selector(openApp(_:)), keyEquivalent: "")
+        open.target = self
+        menu.addItem(open)
+        return menu
+    }
+
+    /// Flip the master switch straight from the Finder toolbar. Writing the shared key
+    /// also notifies the menu-bar app (which observes the same store).
+    @objc private func toggleBadging(_ sender: NSMenuItem) {
+        BadgeStore.shared.badgingEnabled.toggle()
+        scheduleReload()
+    }
+
+    /// Launch/activate the containing menu-bar app so the user can reach the full UI.
+    /// The .app is three levels up from this .appex (…/Badges.app/Contents/PlugIns/*.appex).
+    @objc private func openApp(_ sender: NSMenuItem) {
+        let appURL = Bundle.main.bundleURL
+            .deletingLastPathComponent()   // PlugIns
+            .deletingLastPathComponent()   // Contents
+            .deletingLastPathComponent()   // Badges.app
+        NSWorkspace.shared.open(appURL)
     }
 }
