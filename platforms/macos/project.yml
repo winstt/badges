@@ -46,6 +46,13 @@ targets:
         INFOPLIST_KEY_LSUIElement: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_HARDENED_RUNTIME: YES
+      configs:
+        # The Release build (what ships to the Mac App Store) defines APPSTORE, which
+        # compiles out the in-app "Donate" links — App Store review rejects external
+        # donation links (they'd have to go through In-App Purchase). Donations live on
+        # the GitHub repo instead. Debug/dev builds keep Donate visible.
+        Release:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: APPSTORE
     entitlements:
       path: App/Badges.entitlements
       properties:

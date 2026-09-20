@@ -95,11 +95,13 @@ struct MenuPanel: View {
 
             Spacer()
 
-            // TODO: point at the real donate page once the repo/sponsors is live.
+            #if !APPSTORE
+            // App Store review rejects external donation links; excluded from that build.
             Link(destination: URL(string: "https://github.com/sponsors")!) {
                 Image(systemName: "heart.fill")
             }
             .help("Donate")
+            #endif
 
             Button {
                 NSApp.terminate(nil)
@@ -239,11 +241,13 @@ struct ContentView: View {
             Toggle("Badging", isOn: $model.badgingEnabled)
                 .toggleStyle(.switch)
             Spacer()
-            // TODO: point at the real donate page once the repo/sponsors is live.
+            #if !APPSTORE
+            // App Store review rejects external donation links; excluded from that build.
             Link(destination: URL(string: "https://github.com/sponsors")!) {
                 Label("Donate", systemImage: "heart.fill")
                     .font(.caption.bold())
             }
+            #endif
         }
         .padding()
     }
