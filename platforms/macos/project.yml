@@ -61,7 +61,9 @@ targets:
     entitlements:
       path: App/Badges.entitlements
       properties:
-        com.apple.security.app-sandbox: true
+        # App Sandbox comes from the ENABLE_APP_SANDBOX build setting (single source) —
+        # duplicating it here produced a duplicate entitlement key that broke the DER
+        # entitlements the App Store validator reads ("App sandbox not enabled").
         com.apple.security.files.user-selected.read-only: true
         # Team-ID-prefixed app group: required for Developer ID (non-MAS) macOS
         # distribution; group.* would need a provisioning profile and prompts on
@@ -87,8 +89,9 @@ targets:
     entitlements:
       path: FinderExt/BadgesFinderExt.entitlements
       properties:
-        # FinderSync extensions must be sandboxed or macOS won't load them.
-        com.apple.security.app-sandbox: true
+        # App Sandbox is provided by the ENABLE_APP_SANDBOX build setting (single source
+        # of truth — avoids a duplicate entitlement key). FinderSync still requires the
+        # sandbox; the build setting satisfies it.
         # Team-ID-prefixed app group: shared ruleset container between app + extension.
         com.apple.security.application-groups:
           - $(TeamIdentifierPrefix)com.matyasnowak.badges
