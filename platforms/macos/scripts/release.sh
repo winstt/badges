@@ -67,6 +67,8 @@ echo "-- Packaging $DMG"
 STAGE="$(mktemp -d)"; cp -R "$APP" "$STAGE/"
 create-dmg \
   --volname "Badges $VERSION" \
+  --volicon "$ROOT/scripts/dmg-assets/VolumeIcon.icns" \
+  --background "$ROOT/scripts/dmg-assets/background.png" \
   --window-pos 200 120 --window-size 520 360 --icon-size 100 \
   --icon "Badges.app" 140 180 --app-drop-link 380 180 --no-internet-enable \
   "$DMG" "$STAGE" >/dev/null || { [ -f "$DMG" ] || { echo "✗ create-dmg failed"; exit 1; }; }
