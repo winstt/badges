@@ -5,6 +5,7 @@
 build/
 DerivedData/
 dist/
+.build-release/
 .build-dmg/
 .dd/
 xcuserdata/
