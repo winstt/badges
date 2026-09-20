@@ -46,6 +46,11 @@ targets:
         INFOPLIST_KEY_LSUIElement: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_HARDENED_RUNTIME: YES
+        # Declare App Sandbox as a build setting too (not only via the entitlements
+        # file): Xcode's App Store "Distribute" re-sign honors this, whereas a loose
+        # entitlements file can get dropped from the main executable → upload validation
+        # "App sandbox not enabled". Belt-and-suspenders with Badges.entitlements.
+        ENABLE_APP_SANDBOX: YES
       configs:
         # The Release build (what ships to the Mac App Store) defines APPSTORE, which
         # compiles out the in-app "Donate" links — App Store review rejects external
@@ -77,6 +82,7 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: FinderExt/BadgesFinderExt-Info.plist
         ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_APP_SANDBOX: YES
         SKIP_INSTALL: YES
     entitlements:
       path: FinderExt/BadgesFinderExt.entitlements
