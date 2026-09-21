@@ -49,34 +49,6 @@ for the **B** in your menu bar — badges appear on matching files in Finder.
 > *Core Sync* under the same Extensions pane if badges don't appear. (Badges detects
 > this and links you straight there.)
 
-<details>
-<summary>Build from source</summary>
-
-You need macOS 14.6+ and **full Xcode** installed (not just Command Line Tools).
-
-```sh
-# 1. tools
-brew install xcodegen
-xcode-select --install                      # if you don't have Xcode CLTs
-
-# 2. get the code
-git clone https://github.com/winstt/badges.git
-cd badges/platforms/macos
-
-# 3. build
-xcodegen generate
-xcodebuild -project Badges.xcodeproj -scheme Badges -configuration Release build
-
-# 4. install into /Applications (FinderSync only loads from there)
-APP=$(xcodebuild -project Badges.xcodeproj -scheme Badges -configuration Release \
-        -showBuildSettings | awk -F' = ' \
-        '/ TARGET_BUILD_DIR /{d=$2} / FULL_PRODUCT_NAME /{n=$2} END{print d"/"n}')
-cp -R "$APP" /Applications/Badges.app
-open /Applications/Badges.app
-```
-
-</details>
-
 ## Screenshots
 
 <div align="center">
