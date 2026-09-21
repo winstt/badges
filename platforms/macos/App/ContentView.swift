@@ -97,7 +97,7 @@ struct MenuPanel: View {
 
             #if !APPSTORE
             // App Store review rejects external donation links; excluded from that build.
-            Link(destination: URL(string: "https://github.com/sponsors")!) {
+            Link(destination: URL(string: "https://ko-fi.com/matyasnow")!) {
                 Image(systemName: "heart.fill")
             }
             .help("Donate")
@@ -243,7 +243,7 @@ struct ContentView: View {
             Spacer()
             #if !APPSTORE
             // App Store review rejects external donation links; excluded from that build.
-            Link(destination: URL(string: "https://github.com/sponsors")!) {
+            Link(destination: URL(string: "https://ko-fi.com/matyasnow")!) {
                 Label("Donate", systemImage: "heart.fill")
                     .font(.caption.bold())
             }

@@ -35,7 +35,57 @@ source (MIT).
 
 ## Try it (macOS)
 
-> **Heads up:** there's **no one-click download yet.** Until the app is notarized
-> with an Apple *Developer ID*, a prebuilt binary won't launch on someone else's Mac
-> (Gatekeeper blocks it). So for now Badges is **build-from-source** — a bit technical,
-> but ~2 minutes if you're comfortable in the terminal. A signed `.dmg` is coming.
+**Badges 1.0 is out** — a signed, Apple-notarized build you can install with a
+double-click. Requires **macOS 14.6 or later** (works on Sonoma, Sequoia and Tahoe).
+
+- ⬇️ **[Download the latest release](https://github.com/winstt/badges/releases/latest)** (`.dmg`, free)
+- 🛒 **[Get it on Gumroad](https://6478320158004.gumroad.com/l/badges)** — pay what you want
+
+Open the `.dmg`, drag **Badges** into **Applications**, launch it, then enable the
+extension in **System Settings → General → Login Items & Extensions → Finder**. Look
+for the **B** in your menu bar — badges appear on matching files in Finder.
+
+> Using Adobe Creative Cloud? Its Finder extension can hog the badge slot — turn off
+> *Core Sync* under the same Extensions pane if badges don't appear. (Badges detects
+> this and links you straight there.)
+
+<details>
+<summary>Build from source</summary>
+
+You need macOS 14.6+ and **full Xcode** installed (not just Command Line Tools).
+
+```sh
+# 1. tools
+brew install xcodegen
+xcode-select --install                      # if you don't have Xcode CLTs
+
+# 2. get the code
+git clone https://github.com/winstt/badges.git
+cd badges/platforms/macos
+
+# 3. build
+xcodegen generate
+xcodebuild -project Badges.xcodeproj -scheme Badges -configuration Release build
+
+# 4. install into /Applications (FinderSync only loads from there)
+APP=$(xcodebuild -project Badges.xcodeproj -scheme Badges -configuration Release \
+        -showBuildSettings | awk -F' = ' \
+        '/ TARGET_BUILD_DIR /{d=$2} / FULL_PRODUCT_NAME /{n=$2} END{print d"/"n}')
+cp -R "$APP" /Applications/Badges.app
+open /Applications/Badges.app
+```
+
+</details>
+
+## Screenshots
+
+<div align="center">
+  <img src="shared/promo/badges-grid.jpg" width="80%" alt="Badges on every format you work with"><br><br>
+  <img src="shared/promo/badges-finder.jpg" width="80%" alt="File-type badges in Finder"><br><br>
+  <img src="shared/promo/badges-generator.jpg" width="60%" alt="Generate your own on-brand badges in the app">
+</div>
+
+## Support
+
+Badges is free and open source. If it saves you time, you can
+**[buy me a coffee](https://ko-fi.com/matyasnow)** ☕ — thank you!
