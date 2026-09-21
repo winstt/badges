@@ -8,8 +8,7 @@
 
 ---
 
-Badges started as a way to visually tell apart lookalike files — a `.psd` from a `.png`,
-a working file from an export — right in the Finder window you're already looking at. It
+Badges started as a way to visually tell apart lookalike files — a `.psd` from a `.png`,from their preview — right in the Finder window you're already looking at. It
 grew into a small system for **assigning icons to the formats you work with**.
 
 - **Flexibility** — badge any format you like, not a fixed list.
