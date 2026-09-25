@@ -11,8 +11,8 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.0.1"
+    CURRENT_PROJECT_VERSION: "2"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
     # Xcode 16+ wraps Debug builds in a "debug dylib" stub for previews/hot-reload.
@@ -55,7 +55,9 @@ targets:
         # The Release build (what ships to the Mac App Store) defines APPSTORE, which
         # compiles out the in-app "Donate" links — App Store review rejects external
         # donation links (they'd have to go through In-App Purchase). Donations live on
-        # the GitHub repo instead. Debug/dev builds keep Donate visible.
+        # the GitHub repo instead. Debug/dev builds keep Donate visible. It also drops
+        # the DMG-only "move to Applications" check (SetupChecks.swift). The direct-
+        # download DMG is archived by scripts/release.sh with APPSTORE overridden away.
         Release:
           SWIFT_ACTIVE_COMPILATION_CONDITIONS: APPSTORE
     entitlements:
