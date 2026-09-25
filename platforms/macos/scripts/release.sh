@@ -39,8 +39,11 @@ xcodegen generate >/dev/null
 
 echo "-- Archiving (Release)"
 rm -rf "$BUILD"; mkdir -p "$BUILD"
+# Override APPSTORE (set on Release in project.yml): the DMG build keeps the
+# "move to Applications" check and the Donate link, which only the App Store build drops.
 xcodebuild -project Badges.xcodeproj -scheme "$SCHEME" -configuration Release \
   -destination 'generic/platform=macOS' -archivePath "$ARCHIVE" \
+  SWIFT_ACTIVE_COMPILATION_CONDITIONS=DEVELOPER_ID \
   archive >/dev/null
 
 echo "-- Exporting Developer ID app"
