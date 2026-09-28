@@ -25,9 +25,10 @@ class FinderSync: FIFinderSync {
     override init() {
         super.init()
 
-        // Observe the boot disk plus every mounted volume (external drives like a T7,
-        // network shares, disk images). "/" alone does NOT reliably get Finder to badge
-        // items on other volumes — each volume root has to be in the observed set.
+        // Observe the boot disk plus /Volumes (external drives like a T7, network
+        // shares, disk images). "/" alone does NOT reliably get Finder to badge items
+        // on other volumes, so /Volumes is observed explicitly — see
+        // `refreshObservedDirectories` for why not each volume root.
         refreshObservedDirectories()
 
         registerBadges()
@@ -38,8 +39,8 @@ class FinderSync: FIFinderSync {
         suite.addObserver(self, forKeyPath: BadgeStore.badgingEnabledDefaultsKey, options: [], context: nil)
         suite.addObserver(self, forKeyPath: BadgeStore.fileBadgesDefaultsKey, options: [], context: nil)
 
-        // Re-observe when drives are plugged in / ejected so a freshly mounted T7 gets
-        // badged without relaunching Finder.
+        // Re-assert the observed roots when drives are plugged in / ejected so Finder
+        // queries a freshly mounted T7 without relaunching.
         let nc = NSWorkspace.shared.notificationCenter
         nc.addObserver(self, selector: #selector(volumesChanged),
                        name: NSWorkspace.didMountNotification, object: nil)
@@ -77,21 +78,25 @@ class FinderSync: FIFinderSync {
     }
 
     @objc private func volumesChanged(_ note: Notification) {
+        // The observed set itself doesn't change on mount, so drop it first to make
+        // Finder re-query the new volume (same trick as `reload`).
+        controller.directoryURLs = []
         refreshObservedDirectories()
     }
 
-    /// The set of roots Finder should ask us about: the boot volume plus every mounted
-    /// volume. Building the URL list needs no file access (just paths), so it's
-    /// sandbox-safe.
+    /// The set of roots Finder should ask us about: the boot volume plus `/Volumes`,
+    /// the mount point parent of every other volume. Building the URL list needs no
+    /// file access (just paths), so it's sandbox-safe.
+    ///
+    /// Never put an individual volume root (e.g. `/Volumes/T7`) in this set: Finder
+    /// replaces the sidebar icon of any observed directory that's also a sidebar item
+    /// with the extension's app icon, so every external drive and mounted DMG showed a
+    /// Badges "B" instead of its drive icon. `/Volumes` itself is never in the sidebar.
     private func refreshObservedDirectories() {
-        var roots: Set<URL> = [URL(fileURLWithPath: "/")]
-        if let volumes = FileManager.default.mountedVolumeURLs(
-            includingResourceValuesForKeys: nil,
-            options: [.skipHiddenVolumes]
-        ) {
-            roots.formUnion(volumes)
-        }
-        controller.directoryURLs = roots
+        controller.directoryURLs = [
+            URL(fileURLWithPath: "/"),
+            URL(fileURLWithPath: "/Volumes", isDirectory: true),
+        ]
     }
 
     override func observeValue(
